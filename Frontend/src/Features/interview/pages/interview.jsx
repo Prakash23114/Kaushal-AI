@@ -1,195 +1,688 @@
-import React, { useState, useEffect } from 'react'
-import '../style/interview.scss'
-import { useInterview } from '../hooks/useInterview.js'
-import { useNavigate, useParams } from 'react-router'
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router';
+import {
+  Code2,
+  Users,
+  Compass,
+  Download,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Bot,
+  Copy,
+  Check,
+  AlertTriangle,
+  ArrowRight,
+  Printer
+} from 'lucide-react';
+import { useInterview } from '../hooks/useInterview';
 
+export const Interview = () => {
+  const { interviewId } = useParams();
+  const navigate = useNavigate();
+  const { report, getReportById, loading, getResumePdf } = useInterview();
 
-
-const NAV_ITEMS = [
-    { id: 'technical', label: 'Technical Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>) },
-    { id: 'behavioral', label: 'Behavioral Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>) },
-    { id: 'roadmap', label: 'Road Map', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
-]
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-const QuestionCard = ({ item, index }) => {
-    const [ open, setOpen ] = useState(false)
-    return (
-        <div className='q-card'>
-            <div className='q-card__header' onClick={() => setOpen(o => !o)}>
-                <span className='q-card__index'>Q{index + 1}</span>
-                <p className='q-card__question'>{item.question}</p>
-                <span className={`q-card__chevron ${open ? 'q-card__chevron--open' : ''}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-                </span>
-            </div>
-            {open && (
-                <div className='q-card__body'>
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--intention'>Intention</span>
-                        <p>{item.intention}</p>
-                    </div>
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--answer'>Model Answer</span>
-                        <p>{item.answer}</p>
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
-const RoadMapDay = ({ day }) => (
-    <div className='roadmap-day'>
-        <div className='roadmap-day__header'>
-            <span className='roadmap-day__badge'>Day {day.day}</span>
-            <h3 className='roadmap-day__focus'>{day.focus}</h3>
-        </div>
-        <ul className='roadmap-day__tasks'>
-            {day.tasks.map((task, i) => (
-                <li key={i}>
-                    <span className='roadmap-day__bullet' />
-                    {task}
-                </li>
-            ))}
-        </ul>
-    </div>
-)
-
-// ── Main Component ────────────────────────────────────────────────────────────
-const Interview = () => {
-    const [ activeNav, setActiveNav ] = useState('technical')
-    const { report, getReportById, loading, getResumePdf } = useInterview()
-    const { interviewId } = useParams()
-
-    useEffect(() => {
-        if (interviewId) {
-            getReportById(interviewId)
-        }
-    }, [ interviewId ])
-
-
-
-    if (loading || !report) {
-        return (
-            <main className='loading-screen'>
-                <h1>Loading your interview plan...</h1>
-            </main>
-        )
+  const [activeTab, setActiveTab] = useState('technical');
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState(null);
+  const [openQuestions, setOpenQuestions] = useState({ 0: true });
+  const [completedTasks, setCompletedTasks] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`kaushal_roadmap_done_${interviewId}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
     }
+  });
 
-    const scoreColor =
-        report.matchScore >= 80 ? 'score--high' :
-            report.matchScore >= 60 ? 'score--mid' : 'score--low'
+  useEffect(() => {
+    if (interviewId) {
+      getReportById(interviewId);
+    }
+  }, [interviewId]);
 
+  const toggleQuestion = (idx) => {
+    setOpenQuestions((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  };
 
+  const handleCopy = (text, idx) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(idx);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const handleToggleTask = (taskKey) => {
+    setCompletedTasks((prev) => {
+      const updated = { ...prev, [taskKey]: !prev[taskKey] };
+      localStorage.setItem(`kaushal_roadmap_done_${interviewId}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleDownloadResume = async () => {
+    setDownloadingPdf(true);
+    try {
+      await getResumePdf(interviewId);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  if (loading || !report) {
     return (
-        <div className='interview-page'>
-            <div className='interview-layout'>
+      <div
+        className="glass-card"
+        style={{
+          padding: '4rem 2rem',
+          textAlign: 'center',
+          borderRadius: 'var(--radius-xl)',
+          maxWidth: '600px',
+          margin: '3rem auto',
+        }}
+      >
+        <Sparkles size={36} color="var(--primary)" style={{ animation: 'spin 2s linear infinite', margin: '0 auto 1rem' }} />
+        <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Loading Interview Strategy...</h3>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
+          Retrieving personalized questions, behavioral frameworks, and roadmap.
+        </p>
+      </div>
+    );
+  }
 
-                {/* ── Left Nav ── */}
-                <nav className='interview-nav'>
-                    <div className="nav-content">
-                        <p className='interview-nav__label'>Sections</p>
-                        {NAV_ITEMS.map(item => (
-                            <button
-                                key={item.id}
-                                className={`interview-nav__item ${activeNav === item.id ? 'interview-nav__item--active' : ''}`}
-                                onClick={() => setActiveNav(item.id)}
-                            >
-                                <span className='interview-nav__icon'>{item.icon}</span>
-                                {item.label}
-                            </button>
-                        ))}
-                    </div>
-                    <button
-                        onClick={() => { getResumePdf(interviewId) }}
-                        className='button primary-button' >
-                        <svg height={"0.8rem"} style={{ marginRight: "0.8rem" }} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.6144 17.7956 11.492 15.7854C12.2731 13.9966 13.6789 12.5726 15.4325 11.7942L17.8482 10.7219C18.6162 10.381 18.6162 9.26368 17.8482 8.92277L15.5079 7.88394C13.7092 7.08552 12.2782 5.60881 11.5105 3.75894L10.6215 1.61673C10.2916.821765 9.19319.821767 8.8633 1.61673L7.97427 3.75892C7.20657 5.60881 5.77553 7.08552 3.97685 7.88394L1.63658 8.92277C.868537 9.26368.868536 10.381 1.63658 10.7219L4.0523 11.7942C5.80589 12.5726 7.21171 13.9966 7.99275 15.7854L8.8704 17.7956C9.20776 18.5682 10.277 18.5682 10.6144 17.7956ZM19.4014 22.6899 19.6482 22.1242C20.0882 21.1156 20.8807 20.3125 21.8695 19.8732L22.6299 19.5353C23.0412 19.3526 23.0412 18.7549 22.6299 18.5722L21.9121 18.2532C20.8978 17.8026 20.0911 16.9698 19.6586 15.9269L19.4052 15.3156C19.2285 14.8896 18.6395 14.8896 18.4628 15.3156L18.2094 15.9269C17.777 16.9698 16.9703 17.8026 15.956 18.2532L15.2381 18.5722C14.8269 18.7549 14.8269 19.3526 15.2381 19.5353L15.9985 19.8732C16.9874 20.3125 17.7798 21.1156 18.2198 22.1242L18.4667 22.6899C18.6473 23.104 19.2207 23.104 19.4014 22.6899Z"></path></svg>
-                        Download Resume
-                    </button>
-                </nav>
+  const scoreColor =
+    report.matchScore >= 80 ? 'var(--success)' : report.matchScore >= 60 ? 'var(--primary)' : 'var(--warning)';
 
-                <div className='interview-divider' />
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* ── 1. Executive Summary Header Banner ── */}
+      <div
+        className="glass-card"
+        style={{
+          padding: '2rem 2.25rem',
+          borderRadius: 'var(--radius-xl)',
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.06) 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1.5rem',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.4rem' }}>
+            <span className="badge badge-primary">Personalized Plan</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Generated on {new Date(report.createdAt).toLocaleDateString()}
+            </span>
+          </div>
 
-                {/* ── Center Content ── */}
-                <main className='interview-content'>
-                    {activeNav === 'technical' && (
-                        <section>
-                            <div className='content-header'>
-                                <h2>Technical Questions</h2>
-                                <span className='content-header__count'>{report.technicalQuestions.length} questions</span>
-                            </div>
-                            <div className='q-list'>
-                                {report.technicalQuestions.map((q, i) => (
-                                    <QuestionCard key={i} item={q} index={i} />
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {activeNav === 'behavioral' && (
-                        <section>
-                            <div className='content-header'>
-                                <h2>Behavioral Questions</h2>
-                                <span className='content-header__count'>{report.behavioralQuestions.length} questions</span>
-                            </div>
-                            <div className='q-list'>
-                                {report.behavioralQuestions.map((q, i) => (
-                                    <QuestionCard key={i} item={q} index={i} />
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {activeNav === 'roadmap' && (
-                        <section>
-                            <div className='content-header'>
-                                <h2>Preparation Road Map</h2>
-                                <span className='content-header__count'>{report.preparationPlan.length}-day plan</span>
-                            </div>
-                            <div className='roadmap-list'>
-                                {report.preparationPlan.map((day) => (
-                                    <RoadMapDay key={day.day} day={day} />
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                </main>
-
-                <div className='interview-divider' />
-
-                {/* ── Right Sidebar ── */}
-                <aside className='interview-sidebar'>
-
-                    {/* Match Score */}
-                    <div className='match-score'>
-                        <p className='match-score__label'>Match Score</p>
-                        <div className={`match-score__ring ${scoreColor}`}>
-                            <span className='match-score__value'>{report.matchScore}</span>
-                            <span className='match-score__pct'>%</span>
-                        </div>
-                        <p className='match-score__sub'>Strong match for this role</p>
-                    </div>
-
-                    <div className='sidebar-divider' />
-
-                    {/* Skill Gaps */}
-                    <div className='skill-gaps'>
-                        <p className='skill-gaps__label'>Skill Gaps</p>
-                        <div className='skill-gaps__list'>
-                            {report.skillGaps.map((gap, i) => (
-                                <span key={i} className={`skill-tag skill-tag--${gap.severity}`}>
-                                    {gap.skill}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-
-                </aside>
-            </div>
+          <h2 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
+            {report.title || 'Target Position'}
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.4rem' }}>
+            Tailored technical depth, STAR behavioral questions, and actionable roadmap.
+          </p>
         </div>
-    )
-}
 
-export default Interview
+        {/* Match score pill & PDF download button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.65rem 1.25rem',
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-lg)',
+            }}
+          >
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '50%',
+                border: `3px solid ${scoreColor}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                fontSize: '1rem',
+                color: scoreColor,
+              }}
+            >
+              {report.matchScore}%
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Profile Match</div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700 }}>
+                {report.matchScore >= 80 ? 'Strong Match' : report.matchScore >= 60 ? 'Moderate Match' : 'Growth Needed'}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDownloadResume}
+            disabled={downloadingPdf}
+            className="btn btn-secondary"
+            style={{ gap: '0.5rem', borderRadius: 'var(--radius-md)' }}
+          >
+            <Printer size={16} />
+            <span>{downloadingPdf ? 'Generating PDF...' : 'Download ATS Resume'}</span>
+          </button>
+
+          <button
+            onClick={() => navigate(`/app/coach?role=${encodeURIComponent(report.title || '')}`)}
+            className="btn btn-primary"
+            style={{ gap: '0.5rem', borderRadius: 'var(--radius-md)' }}
+          >
+            <Bot size={16} />
+            <span>Practice with AI Coach</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── 2. Strategy Navigation Tabs & Content Layout ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '2rem' }} className="report-grid">
+        {/* Main Content (Left) */}
+        <div>
+          {/* Tab Switcher */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.5rem',
+              borderBottom: '1px solid var(--border-subtle)',
+              paddingBottom: '0.75rem',
+              marginBottom: '1.75rem',
+              overflowX: 'auto',
+            }}
+          >
+            {[
+              { id: 'technical', label: `Technical Questions (${report.technicalQuestions?.length || 0})`, icon: Code2 },
+              { id: 'behavioral', label: `Behavioral Questions (${report.behavioralQuestions?.length || 0})`, icon: Users },
+              { id: 'roadmap', label: `14-Day Roadmap (${report.preparationPlan?.length || 0} Days)`, icon: Compass },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.65rem 1.25rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: isActive ? 'var(--primary)' : 'var(--bg-surface-elevated)',
+                    color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    transition: 'all var(--transition-fast)',
+                    border: '1px solid',
+                    borderColor: isActive ? 'var(--primary)' : 'var(--border-subtle)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Icon size={16} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* TAB 1: TECHNICAL QUESTIONS */}
+          {activeTab === 'technical' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {report.technicalQuestions?.map((q, idx) => {
+                const isOpen = !!openQuestions[idx];
+                return (
+                  <div
+                    key={idx}
+                    className="glass-card"
+                    style={{
+                      borderRadius: 'var(--radius-lg)',
+                      overflow: 'hidden',
+                      transition: 'border-color var(--transition-fast)',
+                      borderColor: isOpen ? 'var(--border-hover)' : 'var(--border-subtle)',
+                    }}
+                  >
+                    <div
+                      onClick={() => toggleQuestion(idx)}
+                      style={{
+                        padding: '1.25rem 1.5rem',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        gap: '1rem',
+                        background: isOpen ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+                        <span
+                          style={{
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(99, 102, 241, 0.15)',
+                            color: 'var(--primary)',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            marginTop: '2px',
+                          }}
+                        >
+                          Q{idx + 1}
+                        </span>
+                        <div>
+                          <h4 style={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.4 }}>
+                            {q.question}
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div style={{ color: 'var(--text-muted)', paddingTop: '4px' }}>
+                        {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                      </div>
+                    </div>
+
+                    {isOpen && (
+                      <div
+                        style={{
+                          padding: '0 1.5rem 1.5rem',
+                          borderTop: '1px solid var(--border-subtle)',
+                          paddingTop: '1.25rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '1.25rem',
+                        }}
+                      >
+                        {/* Interviewer Intention */}
+                        <div
+                          style={{
+                            background: 'var(--bg-surface-elevated)',
+                            padding: '1rem 1.25rem',
+                            borderRadius: 'var(--radius-md)',
+                            borderLeft: '4px solid var(--primary)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              color: 'var(--primary)',
+                              marginBottom: '0.25rem',
+                            }}
+                          >
+                            Interviewer Intention & Evaluation Criteria
+                          </div>
+                          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: 0 }}>
+                            {q.intention}
+                          </p>
+                        </div>
+
+                        {/* Model Answer Strategy */}
+                        <div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              marginBottom: '0.5rem',
+                            }}
+                          >
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              Recommended Answer Strategy & Concepts
+                            </span>
+                            <button
+                              onClick={() => handleCopy(q.answer, idx)}
+                              className="btn btn-ghost btn-sm"
+                              style={{ gap: '0.35rem', fontSize: '0.78rem' }}
+                            >
+                              {copiedIndex === idx ? (
+                                <>
+                                  <Check size={14} color="var(--success)" />
+                                  <span style={{ color: 'var(--success)' }}>Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={14} />
+                                  <span>Copy Strategy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          <div
+                            style={{
+                              background: 'var(--bg-surface-elevated)',
+                              padding: '1.25rem',
+                              borderRadius: 'var(--radius-md)',
+                              fontSize: '0.9rem',
+                              lineHeight: 1.6,
+                              color: 'var(--text-primary)',
+                              whiteSpace: 'pre-wrap',
+                            }}
+                          >
+                            {q.answer}
+                          </div>
+                        </div>
+
+                        {/* Quick action: Practice with Coach */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() =>
+                              navigate(
+                                `/app/coach?prompt=${encodeURIComponent(
+                                  `Test my answer for this technical question: "${q.question}"`
+                                )}`
+                              )
+                            }
+                            className="btn btn-secondary btn-sm"
+                            style={{ gap: '0.4rem' }}
+                          >
+                            <Bot size={15} />
+                            <span>Practice This Question in AI Coach</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TAB 2: BEHAVIORAL QUESTIONS */}
+          {activeTab === 'behavioral' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {report.behavioralQuestions?.map((q, idx) => {
+                const isOpen = !!openQuestions[idx];
+                return (
+                  <div
+                    key={idx}
+                    className="glass-card"
+                    style={{
+                      borderRadius: 'var(--radius-lg)',
+                      overflow: 'hidden',
+                      borderColor: isOpen ? 'var(--border-hover)' : 'var(--border-subtle)',
+                    }}
+                  >
+                    <div
+                      onClick={() => toggleQuestion(idx)}
+                      style={{
+                        padding: '1.25rem 1.5rem',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        gap: '1rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+                        <span
+                          style={{
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(56, 189, 248, 0.15)',
+                            color: 'var(--info)',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            marginTop: '2px',
+                          }}
+                        >
+                          STAR {idx + 1}
+                        </span>
+                        <div>
+                          <h4 style={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.4 }}>
+                            {q.question}
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div style={{ color: 'var(--text-muted)', paddingTop: '4px' }}>
+                        {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                      </div>
+                    </div>
+
+                    {isOpen && (
+                      <div
+                        style={{
+                          padding: '0 1.5rem 1.5rem',
+                          borderTop: '1px solid var(--border-subtle)',
+                          paddingTop: '1.25rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '1.25rem',
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: 'var(--bg-surface-elevated)',
+                            padding: '1rem 1.25rem',
+                            borderRadius: 'var(--radius-md)',
+                            borderLeft: '4px solid var(--info)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              color: 'var(--info)',
+                              marginBottom: '0.25rem',
+                            }}
+                          >
+                            Behavioral Competency Evaluated
+                          </div>
+                          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: 0 }}>
+                            {q.intention}
+                          </p>
+                        </div>
+
+                        <div
+                          style={{
+                            background: 'var(--bg-surface-elevated)',
+                            padding: '1.25rem',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: '0.9rem',
+                            lineHeight: 1.6,
+                            color: 'var(--text-primary)',
+                            whiteSpace: 'pre-wrap',
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: 'var(--primary)' }}>
+                            STAR Response Guide:
+                          </div>
+                          {q.answer}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TAB 3: 14-DAY ROADMAP */}
+          {activeTab === 'roadmap' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {report.preparationPlan?.map((day) => (
+                <div key={day.day} className="glass-card" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '1rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span className="badge badge-primary" style={{ fontSize: '0.85rem', padding: '0.35rem 0.75rem' }}>
+                        Day {day.day}
+                      </span>
+                      <h4 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>{day.focus}</h4>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    {day.tasks?.map((task, taskIdx) => {
+                      const taskKey = `day_${day.day}_task_${taskIdx}`;
+                      const isDone = !!completedTasks[taskKey];
+
+                      return (
+                        <div
+                          key={taskIdx}
+                          onClick={() => handleToggleTask(taskKey)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.65rem 0.85rem',
+                            borderRadius: 'var(--radius-md)',
+                            background: isDone ? 'var(--success-bg)' : 'var(--bg-surface-elevated)',
+                            border: `1px solid ${isDone ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-subtle)'}`,
+                            cursor: 'pointer',
+                            transition: 'all var(--transition-fast)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '6px',
+                              border: `2px solid ${isDone ? 'var(--success)' : 'var(--border-strong)'}`,
+                              background: isDone ? 'var(--success)' : 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isDone && <Check size={14} color="#fff" />}
+                          </div>
+
+                          <span
+                            style={{
+                              fontSize: '0.88rem',
+                              color: isDone ? 'var(--text-muted)' : 'var(--text-primary)',
+                              textDecoration: isDone ? 'line-through' : 'none',
+                            }}
+                          >
+                            {task}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar: Skill Gaps & Readiness Summary */}
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Skill Gaps Card */}
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <AlertTriangle size={18} color="var(--warning)" />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Identified Skill Gaps</h3>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Required by this job description but insufficiently demonstrated in your resume:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {report.skillGaps?.map((gap, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.55rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-surface-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{gap.skill}</span>
+                  <span
+                    className={`badge ${
+                      gap.severity === 'high'
+                        ? 'badge-danger'
+                        : gap.severity === 'medium'
+                        ? 'badge-warning'
+                        : 'badge-primary'
+                    }`}
+                  >
+                    {gap.severity}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() =>
+                navigate(
+                  `/app/coach?prompt=${encodeURIComponent(
+                    `How should I bridge my skill gaps for ${report.title || 'this role'}?`
+                  )}`
+                )
+              }
+              className="btn btn-outline btn-sm"
+              style={{ width: '100%', marginTop: '1.25rem', gap: '0.4rem' }}
+            >
+              <Bot size={15} />
+              <span>Ask Coach to Explain Gaps</span>
+            </button>
+          </div>
+
+          {/* Quick Mock Interview Trigger Card */}
+          <div
+            className="glass-card"
+            style={{
+              padding: '1.5rem',
+              background: 'linear-gradient(145deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%)',
+              border: '1px solid var(--border-hover)',
+            }}
+          >
+            <Sparkles size={24} color="var(--primary)" style={{ marginBottom: '0.75rem' }} />
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+              Simulate Live Interview
+            </h4>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Put your knowledge to the test with our AI Interviewer for this exact position.
+            </p>
+            <button
+              onClick={() =>
+                navigate(
+                  `/app/mock-interview?role=${encodeURIComponent(report.title || 'Software Engineer')}`
+                )
+              }
+              className="btn btn-primary btn-sm"
+              style={{ width: '100%' }}
+            >
+              <span>Launch Mock Interview</span>
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        </aside>
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .report-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default Interview;

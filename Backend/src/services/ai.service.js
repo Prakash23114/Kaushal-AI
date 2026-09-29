@@ -134,6 +134,88 @@ const interviewReportSchema = z.object({
 })
 
 
+const GEMINI_MODELS = [
+    process.env.GEMINI_MODEL || "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash"
+];
+
+async function callGeminiWithRetry(params, maxRetries = 2) {
+    let lastError = null;
+
+    for (const model of GEMINI_MODELS) {
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await ai.models.generateContent({
+                    model,
+                    ...params
+                });
+            } catch (error) {
+                lastError = error;
+                const errMsg = error?.message || "";
+                const status = error?.status || (errMsg.includes('"code":429') ? 429 : errMsg.includes('"code":503') ? 503 : 0);
+
+                const isQuotaExhausted = status === 429 ||
+                    errMsg.includes("RESOURCE_EXHAUSTED") ||
+                    errMsg.includes("Quota exceeded") ||
+                    errMsg.includes("free_tier_requests");
+
+                const isUnavailable = status === 503 ||
+                    errMsg.includes("high demand") ||
+                    errMsg.includes("UNAVAILABLE");
+
+                // If 429 Quota exhausted for this model:
+                // NEVER retry on this model! Break immediately to the next fallback model.
+                if (isQuotaExhausted) {
+                    console.warn(`[Gemini API] Quota exhausted for model '${model}'. Switching to fallback model...`);
+                    break;
+                }
+
+                // If 503 high demand spike:
+                // Retry with exponential backoff on this model
+                if (isUnavailable && attempt < maxRetries) {
+                    const delayMs = (attempt + 1) * 1200 + Math.floor(Math.random() * 400);
+                    console.warn(`[Gemini API] 503 high demand on model '${model}'. Retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+                    await new Promise(r => setTimeout(r, delayMs));
+                    continue;
+                }
+
+                // For 404 (model deprecated/unavailable) or other errors, break to try next fallback model
+                console.warn(`[Gemini API] Error on model '${model}' (status: ${status || 'unknown'}): ${errMsg.slice(0, 100)}. Trying fallback model...`);
+                break;
+            }
+        }
+    }
+
+    // If all models in the fallback chain were exhausted or failed
+    const errMsg = lastError?.message || "";
+    const isQuotaExhausted = lastError?.status === 429 ||
+        errMsg.includes("RESOURCE_EXHAUSTED") ||
+        errMsg.includes("Quota exceeded") ||
+        errMsg.includes("free_tier_requests");
+
+    const isUnavailable = lastError?.status === 503 ||
+        errMsg.includes("high demand") ||
+        errMsg.includes("UNAVAILABLE");
+
+    if (isQuotaExhausted) {
+        const quotaErr = new Error("Gemini free-tier daily request quota has been reached (20 requests limit). Please check your plan or try again later.");
+        quotaErr.status = 429;
+        quotaErr.code = "RESOURCE_EXHAUSTED";
+        throw quotaErr;
+    }
+
+    if (isUnavailable) {
+        const busyErr = new Error("Gemini AI service is currently experiencing high demand across all models. Please try again in a moment.");
+        busyErr.status = 503;
+        busyErr.code = "UNAVAILABLE";
+        throw busyErr;
+    }
+
+    throw lastError;
+}
+
 async function generateInterviewReport({
     resume,
     selfDescription,
@@ -226,14 +308,13 @@ IMPORTANT INSTRUCTIONS
 14. Return ONLY valid JSON matching the provided schema.
 `
 
- const response = await ai.models.generateContent({
-    model: "gemini-3.8-flash",
-    contents: prompt,
-    config: {
-        responseMimeType: "application/json",
-        responseSchema: zodToJsonSchema(interviewReportSchema),
-    }
-});
+    const response = await callGeminiWithRetry({
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: zodToJsonSchema(interviewReportSchema),
+        }
+    });
 
     return JSON.parse(response.text)
 }
@@ -374,8 +455,7 @@ The HTML should contain:
 - No JavaScript
 `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+    const response = await callGeminiWithRetry({
         contents: prompt,
         config: {
             responseMimeType: "application/json",
@@ -390,8 +470,397 @@ The HTML should contain:
     return pdfBuffer
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// KAUSHAL AI COACH SERVICE
+// ─────────────────────────────────────────────────────────────────────────────
+async function askAiCoach({ messages, context = {} }) {
+    const contextPrompt = `You are "Kaushal AI Coach", an expert technical interviewer, mentor, and placement advisor for software engineering and tech careers.
+Candidate Context:
+${context.targetRole ? `- Target Role: ${context.targetRole}` : ''}
+${context.matchScore ? `- Profile Match Score: ${context.matchScore}%` : ''}
+${context.title ? `- Target Position: ${context.title}` : ''}
+${context.skillGaps?.length ? `- Identified Skill Gaps: ${context.skillGaps.map(g => `${g.skill} (${g.severity})`).join(', ')}` : ''}
+${context.resume ? `- Resume Highlights: ${context.resume.slice(0, 1000)}...` : ''}
+
+Your Mission:
+- Answer interview prep questions with structured, realistic, and senior-level insights.
+- For technical questions: explain core engineering concepts, architecture trade-offs, scalability, and code examples.
+- For behavioral questions: guide the candidate to structure their answer using the STAR method (Situation, Task, Action, Result).
+- For project questions: train them to defend engineering choices, explain system flow, and handle scale (e.g. 10k users).
+- Provide feedback without generic fluff: pinpoint missing details and show exactly how to elevate their answer.
+- Format responses cleanly with Markdown, bullet points, and code blocks where applicable.`;
+
+    const chatContents = [
+        { role: "user", parts: [{ text: `${contextPrompt}\n\nPlease respond to the user based on the above background.` }] },
+        { role: "model", parts: [{ text: "Understood. I am Kaushal AI Coach, ready to help you master technical, project, and behavioral interviews. What would you like to prepare or review?" }] },
+        ...messages.map(m => ({
+            role: m.role === "assistant" || m.role === "model" ? "model" : "user",
+            parts: [{ text: m.content }]
+        }))
+    ];
+
+    try {
+        const response = await callGeminiWithRetry({
+            contents: chatContents
+        });
+        return response.text;
+    } catch (error) {
+        console.warn("[AI Coach] Gemini unavailable, generating intelligent mentor guidance fallback:", error.message);
+        const lastMsg = messages[messages.length - 1]?.content || "how to prepare for technical interview";
+        return generateAiCoachFallback(lastMsg, context);
+    }
+}
+
+function generateAiCoachFallback(prompt, context) {
+    const role = context.targetRole || context.title || "Software Engineer";
+    const lower = prompt.toLowerCase();
+
+    if (lower.includes("behavioral") || lower.includes("tell me about") || lower.includes("conflict") || lower.includes("star")) {
+        return `### 💡 Kaushal AI Coach: Behavioral Interview Framework (STAR)
+
+For behavioral interviews targeting **${role}**, interviewers look for structured storytelling and measurable impact:
+
+1. **Situation (15%)**: Set the context concisely. Mention the project, team size, and business stakes.
+2. **Task (15%)**: Clearly define *your* responsibility and the specific roadblock or goal.
+3. **Action (50%)**: Detail the technical and collaborative steps **you** took. Explain *why* you chose this approach over alternatives.
+4. **Result (20%)**: Conclude with quantified impact (e.g., latency dropped by 35%, zero production incidents, shipped 2 days early).
+
+> **Pro Tip**: Keep each answer under 2.5 minutes and focus on ownership rather than "we did this".`;
+    }
+
+    if (lower.includes("system design") || lower.includes("architecture") || lower.includes("scale") || lower.includes("database")) {
+        return `### ⚙️ Kaushal AI Coach: System Design Blueprint for ${role}
+
+When answering architectural and scalability questions:
+
+- **Requirements Clarification**: Establish Functional Requirements vs Non-Functional Requirements (e.g. 100k DAU, p99 latency < 200ms, consistency vs availability).
+- **Core Entities & API Design**: Define the schema, REST/gRPC endpoints, and payload formats.
+- **High-Level Diagram**: Client ➔ CDN / Cloudflare ➔ API Gateway ➔ Load Balancer ➔ Application Instances ➔ Caching Layer (Redis) ➔ Database (Primary/Replica) ➔ Message Queue (Kafka/RabbitMQ) for asynchronous workers.
+- **Deep Dive & Bottlenecks**: Discuss database indexing, partitioning/sharding, cache invalidation strategies, and failure isolation.`;
+    }
+
+    return `### 🎯 Kaushal AI Coach Strategy for ${role}
+
+Here is a focused checklist for your current preparation:
+
+1. **Core Fundamentals**: Review data structures, concurrency, asynchronous patterns, and API contract design.
+2. **Project Defense**: Be prepared to explain:
+   - Why you selected your database (SQL vs NoSQL trade-offs).
+   - How you handle authentication, session security, and authorization.
+   - What happens when a downstream service or network call fails (circuit breakers, retries, dead-letter queues).
+3. **Mock Practice**: Complete today's **Daily Challenge** in the dashboard to practice articulating concise answers.
+
+What specific question or technical topic would you like to drill down next?`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOCK INTERVIEW EVALUATOR SERVICE
+// ─────────────────────────────────────────────────────────────────────────────
+const mockEvaluationSchema = z.object({
+    score: z.number().min(0).max(100).describe("Overall score (0-100) based strictly on candidate's answer quality"),
+    technicalAccuracy: z.number().min(0).max(100).describe("Technical depth, correctness, and accuracy (0-100)"),
+    communication: z.number().min(0).max(100).describe("Clarity, structure, and articulation (0-100)"),
+    answerStructure: z.string().describe("Evaluation of structure (e.g., STAR framework for behavioral, systematic approach for technical)"),
+    confidence: z.enum(["High", "Moderate", "Needs Improvement"]).describe("Perceived answer confidence"),
+    missingPoints: z.array(z.string()).describe("Important points, edge cases, or trade-offs omitted"),
+    improvementSuggestions: z.array(z.string()).describe("Direct actionable suggestions to improve"),
+    betterAnswerApproach: z.string().describe("A professional breakdown of how an ideal candidate would answer"),
+    followUpQuestion: z.string().describe("A realistic follow-up question the interviewer would ask next")
+});
+
+async function evaluateMockAnswer({ question, answer, role = "Software Engineer", difficulty = "Intermediate", interviewType = "Technical" }) {
+    const prompt = `You are a tough, realistic senior interviewer assessing a candidate's live interview response.
+Interview Details:
+- Role: ${role}
+- Difficulty: ${difficulty}
+- Category: ${interviewType}
+
+Question Asked:
+${question}
+
+Candidate Answer:
+${answer}
+
+Evaluate the candidate's answer with realistic industry standards. Do not give fake praise.
+Return ONLY valid JSON matching the schema.`;
+
+    try {
+        const response = await callGeminiWithRetry({
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: zodToJsonSchema(mockEvaluationSchema)
+            }
+        });
+        return JSON.parse(response.text);
+    } catch (error) {
+        console.warn("[Mock Evaluation] Gemini unavailable, generating heuristic evaluation fallback:", error.message);
+        return generateHeuristicMockEvaluation(question, answer, role, difficulty, interviewType);
+    }
+}
+
+function generateHeuristicMockEvaluation(question, answer, role, difficulty, interviewType) {
+    const words = answer.trim().split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+
+    let score = 70;
+    let technicalAccuracy = 72;
+    let communication = 70;
+    let confidence = "Moderate";
+
+    if (wordCount < 20) {
+        score = 45;
+        technicalAccuracy = 50;
+        communication = 48;
+        confidence = "Needs Improvement";
+    } else if (wordCount > 60) {
+        score = 82;
+        technicalAccuracy = 84;
+        communication = 82;
+        confidence = "High";
+    }
+
+    return {
+        score,
+        technicalAccuracy,
+        communication,
+        answerStructure: interviewType === "Behavioral"
+            ? "Follows general situation context, but should more explicitly emphasize quantified results."
+            : "Addresses core logic; would benefit from stating edge cases and performance complexity.",
+        confidence,
+        missingPoints: [
+            "Discussion of trade-offs and alternative implementation approaches.",
+            "Specific real-world error handling, failure scenarios, and latency considerations."
+        ],
+        improvementSuggestions: [
+            "Lead with a concise summary sentence before diving into deeper architectural details.",
+            "Reference concrete metrics (e.g. latency, memory impact, throughput) to validate engineering choices."
+        ],
+        betterAnswerApproach: `An exemplary response should first state the high-level concept clearly, explain the underlying mechanism, and then discuss concrete production implications and trade-offs.`,
+        followUpQuestion: `How would your solution behave under heavy concurrency or unexpected database latency?`
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESUME ANALYZER SERVICE
+// ─────────────────────────────────────────────────────────────────────────────
+const resumeAnalysisSchema = z.object({
+    atsScore: z.number().min(0).max(100).describe("ATS compatibility score 0-100"),
+    technicalStrength: z.number().min(0).max(100).describe("Demonstration of technical depth 0-100"),
+    projectStrength: z.number().min(0).max(100).describe("Impact, metrics, and architecture of projects 0-100"),
+    roleRelevance: z.number().min(0).max(100).describe("Suitability for target role 0-100"),
+    extractedSkills: z.array(z.string()).describe("Key skills found in the resume"),
+    missingKeywords: z.array(z.string()).describe("High-impact keywords missing for the target role"),
+    weakSections: z.array(z.object({
+        section: z.string(),
+        issue: z.string(),
+        recommendation: z.string()
+    })).describe("Sections needing revision with specific fixes"),
+    actionableSuggestions: z.array(z.string()).describe("Specific actionable suggestions to elevate the resume")
+});
+
+async function analyzeResumeDetails({ resumeText, targetRole = "Software Engineer" }) {
+    const prompt = `You are a senior technical recruiter and ATS specialist.
+Analyze this resume for the target role: "${targetRole}".
+
+Resume Content:
+${resumeText}
+
+Evaluate ATS compatibility, technical depth, project impact, missing keywords, weak sections, and actionable improvement steps.
+Return ONLY valid JSON.`;
+
+    const response = await callGeminiWithRetry({
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: zodToJsonSchema(resumeAnalysisSchema)
+        }
+    });
+
+    return JSON.parse(response.text);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JOB DESCRIPTION ANALYZER SERVICE
+// ─────────────────────────────────────────────────────────────────────────────
+const jdAnalysisSchema = z.object({
+    roleTitle: z.string().describe("Target role title extracted from the job description"),
+    experienceLevel: z.string().describe("Expected experience level, e.g. Entry, Mid, Senior"),
+    requiredSkills: z.array(z.string()).describe("Mandatory technical and professional skills"),
+    preferredSkills: z.array(z.string()).describe("Bonus / nice-to-have skills"),
+    responsibilities: z.array(z.string()).describe("Key day-to-day responsibilities"),
+    matchedSkills: z.array(z.string()).describe("Skills present in candidate profile matching the JD"),
+    missingSkills: z.array(z.string()).describe("Skills required by JD that candidate lacks"),
+    partiallyMatchedSkills: z.array(z.string()).describe("Adjacent or related skills"),
+    preparationRecommendations: z.array(z.string()).describe("Top priority study and practice areas for this job")
+});
+
+async function analyzeJobDescription({ jobDescription, resumeText = "" }) {
+    const prompt = `You are an elite technical hiring manager.
+Analyze this Job Description and compare it with the candidate's profile (if provided).
+
+Target Job Description:
+${jobDescription}
+
+Candidate Profile / Resume:
+${resumeText || "No resume provided yet. Analyze JD requirements comprehensively."}
+
+Return ONLY valid JSON matching the schema.`;
+
+    const response = await callGeminiWithRetry({
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: zodToJsonSchema(jdAnalysisSchema)
+        }
+    });
+
+    return JSON.parse(response.text);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DAILY CHALLENGE GENERATOR SERVICE (WITH CACHING & DEDUPLICATION)
+// ─────────────────────────────────────────────────────────────────────────────
+const dailyChallengeSchema = z.object({
+    technical: z.object({
+        question: z.string(),
+        topic: z.string(),
+        difficulty: z.string(),
+        hints: z.string()
+    }),
+    behavioral: z.object({
+        question: z.string(),
+        competency: z.string(),
+        starGuidance: z.string()
+    }),
+    project: z.object({
+        question: z.string(),
+        scenario: z.string(),
+        expectedDefense: z.string()
+    })
+});
+
+// Cache map: 'YYYY-MM-DD_role' -> challenge object
+const dailyChallengeCache = new Map();
+// In-flight deduplication map: 'YYYY-MM-DD_role' -> Promise<challenge>
+const dailyChallengeInFlight = new Map();
+
+// Curated rotating challenge bank for fallback / offline
+const CURATED_DAILY_CHALLENGES = [
+    {
+        technical: {
+            question: "How does Node.js event loop handle asynchronous I/O and process.nextTick vs setImmediate?",
+            topic: "Event Loop & Concurrency",
+            difficulty: "Intermediate",
+            hints: "Think about the microtask queue, macrotask phases (timers, poll, check), and starvation risks."
+        },
+        behavioral: {
+            question: "Describe a situation where you had to push back on a manager or product requirement with technical justification.",
+            competency: "Technical Communication & Leadership",
+            starGuidance: "Use the STAR method: explain the technical risk, data presented, and the compromise achieved."
+        },
+        project: {
+            question: "How did you structure error handling and database transaction rollbacks in your most complex project?",
+            scenario: "System Stability & Robustness",
+            expectedDefense: "Explain global middleware, database session transactions, and graceful recovery."
+        }
+    },
+    {
+        technical: {
+            question: "What is the difference between SQL indexing with B-Trees vs Hash indexes, and when would indexing hurt query performance?",
+            topic: "Database Indexing & Query Optimization",
+            difficulty: "Intermediate",
+            hints: "Consider range queries, write/insert overhead, memory consumption, and table fragmentation."
+        },
+        behavioral: {
+            question: "Tell me about a high-pressure production bug or outage you resolved. How did you triage and prevent recurrence?",
+            competency: "Crisis Management & Ownership",
+            starGuidance: "Highlight rapid isolation, calm communication, post-mortem root cause analysis, and permanent guardrails."
+        },
+        project: {
+            question: "How do you protect your API endpoints from abuse, credential stuffing, and Distributed Denial of Service (DDoS)?",
+            scenario: "Security & API Hardening",
+            expectedDefense: "Discuss token validation, rate limiters (token bucket / Redis), CORS, input sanitation, and CDN firewalls."
+        }
+    },
+    {
+        technical: {
+            question: "Explain how Redis caching strategies (Cache-Aside, Write-Through, Write-Behind) work and how you prevent cache stampedes.",
+            topic: "Distributed Caching & High Throughput",
+            difficulty: "Advanced",
+            hints: "Discuss TTL jitter, mutex locks on cache miss, read-heavy workloads, and eventual consistency."
+        },
+        behavioral: {
+            question: "Describe a time when you collaborated with a difficult stakeholder or non-technical colleague to ship an essential feature.",
+            competency: "Collaboration & Empathy",
+            starGuidance: "Focus on active listening, converting technical jargon into business value, and shared success metrics."
+        },
+        project: {
+            question: "How would you re-architect your project to handle 10x traffic growth without exploding cloud infrastructure costs?",
+            scenario: "Scalability & Architectural Trade-offs",
+            expectedDefense: "Detail horizontal scaling, database read replicas, static asset CDN offloading, and background task queues."
+        }
+    }
+];
+
+async function getDailyChallengeQuestions({ targetRole = "Full Stack Developer" }) {
+    const today = new Date().toISOString().slice(0, 10);
+    const normalizedRole = (targetRole || "default").toLowerCase().trim();
+    const cacheKey = `${today}_${normalizedRole}`;
+
+    // 1. Check memory cache: if already generated today for this role, return immediately!
+    if (dailyChallengeCache.has(cacheKey)) {
+        return dailyChallengeCache.get(cacheKey);
+    }
+
+    // 2. Check in-flight promise: if another request is currently generating it, share the same promise
+    if (dailyChallengeInFlight.has(cacheKey)) {
+        return await dailyChallengeInFlight.get(cacheKey);
+    }
+
+    // 3. Initiate single generation task
+    const generationPromise = (async () => {
+        try {
+            const prompt = `You are an expert interview coach generating today's Daily Interview Challenge for: "${targetRole}".
+Generate:
+1. One realistic technical engineering question.
+2. One behavioral scenario question.
+3. One project defense question (architecture, scaling, or technical decisions).
+Return ONLY valid JSON.`;
+
+            const response = await callGeminiWithRetry({
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: zodToJsonSchema(dailyChallengeSchema)
+                }
+            });
+
+            const parsed = JSON.parse(response.text);
+            dailyChallengeCache.set(cacheKey, parsed);
+            return parsed;
+        } catch (error) {
+            console.warn(`[Daily Challenge] Gemini call unavailable (${error.message}). Using curated fallback for ${today}.`);
+            // Deterministically select curated challenge by day of year so all users get the same challenge today
+            const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+            const fallbackChallenge = CURATED_DAILY_CHALLENGES[dayOfYear % CURATED_DAILY_CHALLENGES.length];
+            dailyChallengeCache.set(cacheKey, fallbackChallenge);
+            return fallbackChallenge;
+        } finally {
+            dailyChallengeInFlight.delete(cacheKey);
+        }
+    })();
+
+    dailyChallengeInFlight.set(cacheKey, generationPromise);
+    return await generationPromise;
+}
 
 module.exports = {
     generateInterviewReport,
-    generateResumePdf
+    generateResumePdf,
+    askAiCoach,
+    evaluateMockAnswer,
+    analyzeResumeDetails,
+    analyzeJobDescription,
+    getDailyChallengeQuestions
 }

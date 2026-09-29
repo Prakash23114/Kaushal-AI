@@ -38,17 +38,22 @@ async function registerUserController(req, res) {
     })
 
     const token = jwt.sign(
-        { id: user._id, username: user.username },
+        { id: user._id.toString(), _id: user._id.toString(), username: user.username },
         process.env.JWT_SECRET,
         { expiresIn: "4d" }
     )
 
-    res.cookie("token", token)
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/"
+    })
 
     res.status(201).json({
         message: "User registered successfully",
         user: {
-            id: user._id,
+            id: user._id.toString(),
             username: user.username,
             email: user.email
         }
@@ -81,17 +86,22 @@ async function loginUserController(req, res) {
         })
     }
     const token = jwt.sign(
-        { id: user._id, username: user.username },
+        { id: user._id.toString(), _id: user._id.toString(), username: user.username },
         process.env.JWT_SECRET,
         { expiresIn: "1d" }
     )
 
-    res.cookie("token", token)
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/"
+    })
 
     res.status(200).json({
         message: "User logged in successfully",
         user: {
-            id: user._id,
+            id: user._id.toString(),
             username: user.username,
             email: user.email
         }
@@ -99,18 +109,22 @@ async function loginUserController(req, res) {
 }
 
 /**
- * @name loginUserController
- * @description login a user, expects email and password in the request body
+ * @name logoutUserController
+ * @description Logout a user by blacklisting the JWT token
  * @access Public
  */
 
 async function logoutUserController(req, res) {
-    const token = req.cookies.token
+    const token = req.cookies?.token
 
     if (token) {
-        await tokenBlacklistModel.create({ token })
+        try {
+            await tokenBlacklistModel.create({ token })
+        } catch (e) {
+            console.warn("Token blacklist warning:", e.message)
+        }
     }
-    res.clearCookie("token")
+    res.clearCookie("token", { path: "/" })
 
     return res.status(200).json({
         message: "User logged out successfully"
@@ -124,20 +138,36 @@ async function logoutUserController(req, res) {
  * @access private
  */
 async function getMeController(req, res) {
+    try {
+        // req.user is guaranteed and verified by authUser middleware
+        let user = req.user
 
-    const user = await userModel.findById(req.user.id)
-
-
-
-    res.status(200).json({
-        message: "User details fetched successfully",
-        user: {
-            id: user._id,
-            username: user.username,
-            email: user.email
+        if (!user && req.user?.id) {
+            user = await userModel.findById(req.user.id).select("-password")
         }
-    })
 
+        if (!user) {
+            res.clearCookie("token", { path: "/" })
+            return res.status(401).json({
+                message: "User session expired or user not found. Please login again."
+            })
+        }
+
+        return res.status(200).json({
+            message: "User details fetched successfully",
+            user: {
+                id: (user._id || user.id).toString(),
+                username: user.username,
+                email: user.email
+            }
+        })
+    } catch (error) {
+        console.error("getMeController error:", error)
+        return res.status(500).json({
+            message: "Failed to fetch user details",
+            error: error.message
+        })
+    }
 }
 
 module.exports = {

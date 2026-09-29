@@ -12,9 +12,14 @@ export const useAuth = () => {
         setLoading(true)
         try {
             const data = await login({ email, password })
-            setUser(data.user)
+            if (data?.user) {
+                setUser(data.user)
+                return { success: true, user: data.user }
+            }
+            throw new Error("Unable to log in.")
         } catch (err) {
-            console.error(err)
+            console.error("Login error:", err)
+            throw err
         } finally {
             setLoading(false)
         }
@@ -24,9 +29,14 @@ export const useAuth = () => {
         setLoading(true)
         try {
             const data = await register({ username, email, password })
-            setUser(data.user)
+            if (data?.user) {
+                setUser(data.user)
+                return { success: true, user: data.user }
+            }
+            throw new Error("Unable to register.")
         } catch (err) {
-            console.error(err)
+            console.error("Register error:", err)
+            throw err
         } finally {
             setLoading(false)
         }
@@ -45,21 +55,34 @@ export const useAuth = () => {
     }
 
     useEffect(() => {
+        let isMounted = true;
 
         const getAndSetUser = async () => {
             try {
-
                 const data = await getMe()
-                setUser(data.user)
+                if (isMounted) {
+                    if (data?.user) {
+                        setUser(data.user)
+                    } else {
+                        setUser(null)
+                    }
+                }
             } catch (err) {
-                console.error(err)
+                if (isMounted) {
+                    setUser(null)
+                }
             } finally {
-                setLoading(false)
+                if (isMounted) {
+                    setLoading(false)
+                }
             }
         }
 
         getAndSetUser()
 
+        return () => {
+            isMounted = false;
+        }
     }, [])
 
     return { user, loading, handleRegister, handleLogin, handleLogout }

@@ -1,7 +1,4 @@
 const mongoose = require("mongoose")
-const authController = require("../controllers/auth.controller")
-const { authMiddleware } = require("../middlewares/auth.middleware")
-const { authRouter } = require("../routes/auth.routes")
 
 
 const userSchema = new mongoose.Schema({

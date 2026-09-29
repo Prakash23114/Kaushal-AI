@@ -38,7 +38,11 @@ main{
     }
 
     a{
-        color: #e1034d;
+        color: #0284c7;
         text-decoration: none;
+        font-weight: 600;
+        &:hover {
+            text-decoration: underline;
+        }
     }
 }

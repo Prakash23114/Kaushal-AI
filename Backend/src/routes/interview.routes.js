@@ -1,75 +1,63 @@
-const express = require("express")
-const authMiddleware = require("../middlewares/auth.middleware")
-const interviewController = require("../controllers/interview.controller")
-const upload = require("../middlewares/file.middleware")
+const express = require("express");
+const authMiddleware = require("../middlewares/auth.middleware");
+const interviewController = require("../controllers/interview.controller");
+const upload = require("../middlewares/file.middleware");
 
-const interviewRouter = express.Router()
-
-
+const interviewRouter = express.Router();
 
 /**
- * @route POST /api/interview/
- * @description generate new interview report on the basis of user self description,resume pdf and job description.
- * @access private
+ * Strategy Reports & PDF
  */
-interviewRouter.post("/", authMiddleware.authUser, upload.single("resume"), interviewController.generateInterViewReportController)
+interviewRouter.post("/", authMiddleware.authUser, upload.single("resume"), interviewController.generateInterViewReportController);
+interviewRouter.get("/report/:interviewId", authMiddleware.authUser, interviewController.getInterviewReportByIdController);
+interviewRouter.get("/", authMiddleware.authUser, interviewController.getAllInterviewReportsController);
+interviewRouter.post("/resume/pdf/:interviewReportId", authMiddleware.authUser, interviewController.generateResumePdfController);
 
 /**
- * @route GET /api/interview/report/:interviewId
- * @description get interview report by interviewId.
- * @access private
+ * AI Coach
  */
-interviewRouter.get("/report/:interviewId", authMiddleware.authUser, interviewController.getInterviewReportByIdController)
-
+interviewRouter.post("/coach/chat", authMiddleware.authUser, interviewController.askAiCoachController);
 
 /**
- * @route GET /api/interview/
- * @description get all interview reports of logged in user.
- * @access private
+ * Mock Interview
  */
-interviewRouter.get("/", authMiddleware.authUser, interviewController.getAllInterviewReportsController)
-
+interviewRouter.post("/mock/questions", authMiddleware.authUser, interviewController.generateMockQuestionsController);
+interviewRouter.post("/mock/evaluate", authMiddleware.authUser, interviewController.evaluateMockAnswerController);
+interviewRouter.post("/mock/save-session", authMiddleware.authUser, interviewController.saveMockSessionController);
+interviewRouter.get("/mock/sessions", authMiddleware.authUser, interviewController.getAllInterviewSessionsController);
 
 /**
- * @route POST /api/interview/resume/pdf/:interviewReportId
- * @description generate resume pdf on the basis of user self description, resume content and job description.
- * @access private
+ * Project Defense
  */
-interviewRouter.post("/resume/pdf/:interviewReportId", authMiddleware.authUser, interviewController.generateResumePdfController)
+interviewRouter.post("/project-defense/questions", authMiddleware.authUser, interviewController.getProjectDefenseQuestionsController);
 
 /**
- * @route POST /api/interview/coach/chat
- * @description Context-aware AI Coach chat
- * @access private
+ * Preparation Roadmap
  */
-interviewRouter.post("/coach/chat", authMiddleware.authUser, interviewController.askAiCoachController)
+interviewRouter.get("/roadmap", authMiddleware.authUser, interviewController.getPersonalizedRoadmapController);
 
 /**
- * @route POST /api/interview/mock/evaluate
- * @description Evaluate mock interview answer
- * @access private
+ * Daily Challenge
  */
-interviewRouter.post("/mock/evaluate", authMiddleware.authUser, interviewController.evaluateMockAnswerController)
+interviewRouter.get("/daily-challenge", authMiddleware.authUser, interviewController.getDailyChallengeController);
+interviewRouter.post("/daily-challenge/submit", authMiddleware.authUser, interviewController.submitDailyChallengeController);
 
 /**
- * @route POST /api/interview/analyze-resume
- * @description Analyze resume for ATS score, strengths, and missing keywords
- * @access private
+ * Progress Analytics
  */
-interviewRouter.post("/analyze-resume", authMiddleware.authUser, upload.single("resume"), interviewController.analyzeResumeController)
+interviewRouter.get("/analytics", authMiddleware.authUser, interviewController.getAnalyticsController);
 
 /**
- * @route POST /api/interview/analyze-jd
- * @description Analyze job description and compare skills
- * @access private
+ * Question Bank
  */
-interviewRouter.post("/analyze-jd", authMiddleware.authUser, interviewController.analyzeJobDescriptionController)
+interviewRouter.get("/question-bank", authMiddleware.authUser, interviewController.getQuestionBankController);
+interviewRouter.post("/question-bank/toggle-practiced", authMiddleware.authUser, interviewController.toggleQuestionPracticedController);
+interviewRouter.post("/question-bank/toggle-bookmark", authMiddleware.authUser, interviewController.toggleQuestionBookmarkedController);
 
 /**
- * @route GET /api/interview/daily-challenge
- * @description Get daily 3-question challenge
- * @access private
+ * Resume and JD Analyzers
  */
-interviewRouter.get("/daily-challenge", authMiddleware.authUser, interviewController.getDailyChallengeController)
+interviewRouter.post("/analyze-resume", authMiddleware.authUser, upload.single("resume"), interviewController.analyzeResumeController);
+interviewRouter.post("/analyze-jd", authMiddleware.authUser, interviewController.analyzeJobDescriptionController);
 
-module.exports = interviewRouter
+module.exports = interviewRouter;

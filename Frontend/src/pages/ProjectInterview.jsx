@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 import {
   UserCheck,
   Sparkles,
@@ -10,49 +11,118 @@ import {
   Zap,
   ArrowRight,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  FolderGit2
 } from 'lucide-react';
-import { evaluateMockAnswer } from '../Features/interview/services/interview.api';
-
-const PROJECT_DEFENSE_QUESTIONS = [
-  'Walk me through the high-level architecture of your project and the data flow from client to database.',
-  'Why did you choose your specific database and backend framework over alternatives (e.g. SQL vs NoSQL)?',
-  'What happens if 10,000 concurrent users suddenly start interacting with your application? Where are the bottlenecks?',
-  'What was the single most difficult technical roadblock or production bug you encountered, and how did you debug it?',
-  'How did you handle authentication, session security, and authorization? What security vulnerabilities did you mitigate?',
-  'If you had to rebuild this project from scratch today, what architectural decisions would you change and why?'
-];
+import {
+  getProfileMe,
+  getProjectDefenseQuestions,
+  evaluateMockAnswer,
+  saveMockSession
+} from '../Features/interview/services/interview.api';
 
 export const ProjectInterview = () => {
-  const [projectName, setProjectName] = useState('Kaushal AI / E-Commerce / SaaS Platform');
-  const [techStack, setTechStack] = useState('React, Node.js, Express, MongoDB, JWT, Puppeteer');
-  const [projectSummary, setProjectSummary] = useState(
-    'An AI-powered interview preparation platform featuring resume parsing, personalized 14-day roadmaps, Gemini AI coaching, and ATS resume PDF generation.'
-  );
+  const [candidateProfile, setCandidateProfile] = useState(null);
+  const [detectedProjects, setDetectedProjects] = useState([]);
+  const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
 
+  const [projectName, setProjectName] = useState('');
+  const [techStack, setTechStack] = useState('');
+  const [projectSummary, setProjectSummary] = useState('');
+
+  const [questions, setQuestions] = useState([]);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [evaluations, setEvaluations] = useState([]);
+  const [defenseFinished, setDefenseFinished] = useState(false);
+
+  useEffect(() => {
+    const loadProfileProjects = async () => {
+      try {
+        const res = await getProfileMe();
+        if (res?.profile) {
+          setCandidateProfile(res.profile);
+          const projs = res.profile.projects || [];
+          setDetectedProjects(projs);
+
+          if (projs.length > 0) {
+            const first = projs[0];
+            setProjectName(first.title);
+            setTechStack(first.techStack?.join(', ') || '');
+            setProjectSummary(first.description || first.keyHighlights?.join('. ') || '');
+            fetchDefenseQuestions(first.title, first.techStack?.join(', ') || '', first.description || '');
+          } else {
+            // Default placeholder based on extracted skills
+            const skills = res.profile.extractedSkills?.slice(0, 4).join(', ') || 'React, Node.js, MongoDB';
+            setProjectName('Portfolio Web Application');
+            setTechStack(skills);
+            setProjectSummary('Full-stack web application designed and built by candidate.');
+            fetchDefenseQuestions('Portfolio Web Application', skills, 'Full-stack application');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load candidate projects:', e);
+      }
+    };
+
+    loadProfileProjects();
+  }, []);
+
+  const fetchDefenseQuestions = async (name, stack, summary) => {
+    setLoadingQuestions(true);
+    try {
+      const res = await getProjectDefenseQuestions({
+        projectName: name,
+        techStack: stack,
+        projectSummary: summary
+      });
+      if (res?.questions?.length > 0) {
+        setQuestions(res.questions);
+        setActiveQuestionIndex(0);
+        setEvaluations([]);
+        setDefenseFinished(false);
+      }
+    } catch (e) {
+      console.error('Failed to load defense questions:', e);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  const handleSelectDetectedProject = (index) => {
+    setSelectedProjectIndex(index);
+    const proj = detectedProjects[index];
+    if (proj) {
+      const name = proj.title;
+      const stack = proj.techStack?.join(', ') || '';
+      const summary = proj.description || proj.keyHighlights?.join('. ') || '';
+      setProjectName(name);
+      setTechStack(stack);
+      setProjectSummary(summary);
+      fetchDefenseQuestions(name, stack, summary);
+    }
+  };
 
   const handleEvaluate = async () => {
     if (!userAnswer.trim() || evaluating) return;
 
     setEvaluating(true);
-    const questionText = PROJECT_DEFENSE_QUESTIONS[activeQuestionIndex];
+    const questionText = questions[activeQuestionIndex] || 'Explain your project architecture.';
 
     try {
       const response = await evaluateMockAnswer({
-        question: `[Project: ${projectName} | Tech Stack: ${techStack}] ${questionText}`,
+        question: `[Project: ${projectName} | Tech: ${techStack}] ${questionText}`,
         answer: userAnswer.trim(),
-        role: 'Full Stack Engineer',
+        role: candidateProfile?.targetRoles?.[0] || 'Software Engineer',
         difficulty: 'Advanced',
         interviewType: 'Project Based',
       });
 
       const evalData = response.evaluation || {
-        score: 80,
-        technicalAccuracy: 82,
+        score: 78,
+        technicalAccuracy: 80,
         communication: 78,
         answerStructure: 'Clear breakdown with architecture details',
         missingPoints: ['Quantifiable performance metrics (e.g. latency, throughput)'],
@@ -60,11 +130,33 @@ export const ProjectInterview = () => {
         betterAnswerApproach: 'Define component responsibilities, state trade-offs, and show engineering depth.',
       };
 
-      setEvaluations((prev) => [...prev, { question: questionText, answer: userAnswer, ...evalData }]);
+      const updatedEvals = [...evaluations, { question: questionText, answer: userAnswer.trim(), ...evalData }];
+      setEvaluations(updatedEvals);
       setUserAnswer('');
 
-      if (activeQuestionIndex + 1 < PROJECT_DEFENSE_QUESTIONS.length) {
+      if (activeQuestionIndex + 1 < questions.length) {
         setActiveQuestionIndex((prev) => prev + 1);
+      } else {
+        setDefenseFinished(true);
+        confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+
+        // Save completed session to MongoDB
+        const avgScore = Math.round(updatedEvals.reduce((acc, e) => acc + (e.score || 0), 0) / updatedEvals.length);
+        await saveMockSession({
+          role: candidateProfile?.targetRoles?.[0] || 'Software Engineer',
+          interviewType: 'Project Based',
+          difficulty: 'Advanced',
+          questions: updatedEvals.map(e => e.question),
+          answers: updatedEvals.map(e => e.answer),
+          score: avgScore,
+          technicalScore: avgScore,
+          communicationScore: avgScore,
+          behavioralScore: avgScore,
+          projectScore: avgScore,
+          evaluations: updatedEvals,
+          feedback: `Completed defense of project "${projectName}". Scored ${avgScore}%.`,
+          duration: 600
+        });
       }
     } catch (err) {
       console.error(err);
@@ -82,15 +174,37 @@ export const ProjectInterview = () => {
           Project Defense <span className="gradient-text">Interview Simulator</span>
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-          Placement and senior engineering interviewers scrutinize your projects. Practice defending your tech stack,
-          architecture choices, scalability bottlenecks, and trade-offs.
+          Placement and senior engineering interviewers scrutinize your resume projects. Defend your tech stack,
+          architecture choices, scalability bottlenecks, and technical trade-offs.
         </p>
       </div>
+
+      {/* Detected Resume Projects Picker */}
+      {detectedProjects.length > 0 && (
+        <div className="glass-card" style={{ padding: '1.5rem', borderRadius: 'var(--radius-xl)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <FolderGit2 size={18} color="var(--primary)" />
+            <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Projects Detected on Your Resume</h3>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {detectedProjects.map((p, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSelectDetectedProject(idx)}
+                className={`btn btn-sm ${selectedProjectIndex === idx ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ borderRadius: 'var(--radius-full)', padding: '0.45rem 1rem' }}
+              >
+                <span>{p.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Project Details Setup */}
       <div className="glass-card" style={{ padding: '1.75rem', borderRadius: 'var(--radius-xl)' }}>
         <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem' }}>
-          Configure Your Project Context
+          Configured Project Details
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
@@ -120,7 +234,7 @@ export const ProjectInterview = () => {
 
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-              Project Elevator Pitch
+              Project Summary / Pitch
             </label>
             <textarea
               rows={2}
@@ -130,105 +244,126 @@ export const ProjectInterview = () => {
             />
           </div>
         </div>
+
+        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => fetchDefenseQuestions(projectName, techStack, projectSummary)}
+            disabled={loadingQuestions || !projectName.trim()}
+            className="btn btn-secondary btn-sm"
+          >
+            <Sparkles size={14} />
+            <span>Regenerate Project Questions</span>
+          </button>
+        </div>
       </div>
 
       {/* Defense Question Simulator */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div
-          className="glass-card"
-          style={{
-            padding: '2rem',
-            borderRadius: 'var(--radius-xl)',
-            borderLeft: '5px solid var(--secondary)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span className="badge badge-primary">
-              Defense Question {activeQuestionIndex + 1} of {PROJECT_DEFENSE_QUESTIONS.length}
-            </span>
-          </div>
-
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, lineHeight: 1.5 }}>
-            {PROJECT_DEFENSE_QUESTIONS[activeQuestionIndex]}
-          </h3>
-        </div>
-
-        {/* Candidate Response Box */}
-        <div className="glass-card" style={{ padding: '1.75rem', borderRadius: 'var(--radius-xl)' }}>
-          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-            Defend Your Engineering Choices:
-          </label>
-          <textarea
-            rows={7}
-            value={userAnswer}
-            onChange={(e) => setUserAnswer(e.target.value)}
-            placeholder="Explain the architectural reasoning, trade-offs you considered, and why this design was optimal..."
-            className="textarea-field"
-            disabled={evaluating}
-          />
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <button
-              onClick={handleEvaluate}
-              disabled={!userAnswer.trim() || evaluating}
-              className="btn btn-primary"
-              style={{ gap: '0.5rem' }}
-            >
-              <Sparkles size={16} />
-              <span>{evaluating ? 'Grading Architectural Defense...' : 'Submit Project Defense'}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Historical Evaluations for Project Defense */}
-      {evaluations.length > 0 && (
+      {!defenseFinished ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Evaluated Defense Answers</h3>
+          <div
+            className="glass-card"
+            style={{
+              padding: '2rem',
+              borderRadius: 'var(--radius-xl)',
+              borderLeft: '5px solid var(--secondary)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span className="badge badge-primary">
+                Defense Question {activeQuestionIndex + 1} of {questions.length || 5}
+              </span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Focus: {projectName}
+              </span>
+            </div>
 
-          {evaluations.map((ev, idx) => (
-            <div key={idx} className="glass-card" style={{ padding: '1.75rem', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <span className="badge badge-primary">Round {idx + 1}</span>
-                <span className="badge badge-success">Defense Score: {ev.score}/100</span>
-              </div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.45, marginTop: '0.5rem' }}>
+              {loadingQuestions ? 'Generating project-specific defense questions...' : questions[activeQuestionIndex] || 'Explain your project architecture.'}
+            </h3>
+          </div>
 
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.75rem' }}>{ev.question}</h4>
+          {/* Answer Box */}
+          <div className="glass-card" style={{ padding: '1.75rem', borderRadius: 'var(--radius-xl)' }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+              Your Architectural Defense
+            </label>
+            <textarea
+              rows={6}
+              value={userAnswer}
+              onChange={(e) => setUserAnswer(e.target.value)}
+              placeholder={`Explain your engineering choices for ${projectName}. Mention specific trade-offs, database indexing, scalability bottlenecks, and failure recovery...`}
+              className="textarea-field"
+              disabled={evaluating}
+              style={{ fontSize: '0.95rem', lineHeight: 1.5 }}
+            />
 
-              <div
-                style={{
-                  background: 'var(--bg-surface-elevated)',
-                  padding: '1rem',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '0.88rem',
-                  color: 'var(--text-secondary)',
-                  marginBottom: '1rem',
-                }}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                {userAnswer.trim().split(/\s+/).filter(Boolean).length} words
+              </span>
+
+              <button
+                onClick={handleEvaluate}
+                disabled={evaluating || !userAnswer.trim()}
+                className="btn btn-primary"
+                style={{ padding: '0.75rem 1.75rem', gap: '0.5rem' }}
               >
-                <strong style={{ color: 'var(--text-primary)' }}>Your Defense:</strong> {ev.answer}
-              </div>
+                {evaluating ? (
+                  <>
+                    <Sparkles size={16} className="spin-animation" />
+                    <span>Evaluating Defense...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Submit & Next Question</span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="glass-card" style={{ padding: '2.5rem', borderRadius: 'var(--radius-xl)', textAlign: 'center' }}>
+          <CheckCircle2 size={48} color="var(--success)" style={{ margin: '0 auto 1rem' }} />
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+            Project Defense Complete!
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto 1.5rem' }}>
+            You have successfully defended <strong>{projectName}</strong>. Your answers and evaluations have been saved to your profile.
+          </p>
+          <button
+            onClick={() => {
+              setDefenseFinished(false);
+              setActiveQuestionIndex(0);
+              setEvaluations([]);
+            }}
+            className="btn btn-primary"
+          >
+            Defend Another Project
+          </button>
+        </div>
+      )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                <div style={{ background: 'var(--danger-bg)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                    What the Interviewer Missed:
-                  </div>
-                  <ul style={{ paddingLeft: '1.25rem', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
-                    {ev.missingPoints?.map((p, i) => (
-                      <li key={i}>{p}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div style={{ background: 'rgba(99, 102, 241, 0.08)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                    Senior Answer Strategy:
-                  </div>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
-                    {ev.betterAnswerApproach}
-                  </p>
-                </div>
+      {/* Evaluations History */}
+      {evaluations.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Evaluated Defense Answers</h3>
+          {evaluations.map((evalItem, idx) => (
+            <div key={idx} className="glass-card" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                <span className="badge badge-primary">Q{idx + 1} Defense</span>
+                <span className="badge badge-success">{evalItem.score}% Depth</span>
               </div>
+              <p style={{ fontWeight: 600, fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>{evalItem.question}</p>
+              <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.85rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                {evalItem.answer}
+              </div>
+              {evalItem.betterAnswerApproach && (
+                <div style={{ fontSize: '0.82rem', color: 'var(--primary)', lineHeight: 1.45 }}>
+                  <strong>Senior Recommendation:</strong> {evalItem.betterAnswerApproach}
+                </div>
+              )}
             </div>
           ))}
         </div>

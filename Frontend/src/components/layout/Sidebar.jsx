@@ -23,13 +23,11 @@ const NAV_ITEMS = [
   { path: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/app/coach', label: 'AI Coach', icon: Bot, badge: 'Live' },
   { path: '/app/mock-interview', label: 'Mock Interview', icon: Mic, badge: 'AI' },
-  { path: '/app/project-interview', label: 'Project Defense', icon: UserCheck },
   { path: '/app/resume-analyzer', label: 'Resume Analyzer', icon: FileSearch },
   { path: '/app/job-analyzer', label: 'Job Analyzer', icon: Briefcase },
   { path: '/app/question-bank', label: 'Question Bank', icon: HelpCircle },
   { path: '/app/roadmap', label: 'Preparation Roadmap', icon: Compass },
   { path: '/app/my-interviews', label: 'My Interviews', icon: History },
-  { path: '/app/progress', label: 'Progress Analytics', icon: TrendingUp },
   { path: '/app/daily-challenge', label: 'Daily Challenge', icon: Flame, badge: 'Streak' },
 ];
 

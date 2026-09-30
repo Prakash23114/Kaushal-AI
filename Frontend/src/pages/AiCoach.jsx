@@ -17,7 +17,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useInterview } from '../Features/interview/hooks/useInterview';
-import { askCoach } from '../Features/interview/services/interview.api';
+import { askCoach, getProfileMe } from '../Features/interview/services/interview.api';
 
 const DEFAULT_PROMPTS = [
   'Explain my skill gaps & how to fix them',
@@ -31,6 +31,7 @@ const DEFAULT_PROMPTS = [
 export const AiCoach = () => {
   const [searchParams] = useSearchParams();
   const { reports, getReports } = useInterview();
+  const [candidateProfile, setCandidateProfile] = useState(null);
 
   const [messages, setMessages] = useState(() => {
     try {
@@ -41,7 +42,7 @@ export const AiCoach = () => {
             {
               role: 'assistant',
               content:
-                "Hello! I am **Kaushal AI Coach**, your personal senior technical mentor. I'm here to simulate interview questions, critique your answers, review your project architecture, and guide you through skill gaps. How can I help you prepare today?",
+                "Hello! I am **Kaushal AI Coach**, your personal senior technical mentor. I'm here to simulate interview questions, critique your answers, review your project architecture, and guide you through skill gaps based on your uploaded resume. How can I help you prepare today?",
             },
           ];
     } catch {
@@ -61,10 +62,22 @@ export const AiCoach = () => {
   const [copiedIndex, setCopiedIndex] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // Load existing reports for grounding
+  // Load existing reports and profile for grounding
   useEffect(() => {
     getReports();
+    loadProfile();
   }, []);
+
+  const loadProfile = async () => {
+    try {
+      const res = await getProfileMe();
+      if (res && res.profile) {
+        setCandidateProfile(res.profile);
+      }
+    } catch (err) {
+      console.error('Failed to load candidate profile for coach:', err);
+    }
+  };
 
   // Check URL query parameters (e.g. ?prompt=... or ?topic=...)
   useEffect(() => {
@@ -104,7 +117,9 @@ export const AiCoach = () => {
             title: activeReport.title,
             resumeSummary: activeReport.resume ? activeReport.resume.slice(0, 1000) : '',
           }
-        : {};
+        : {
+            targetRole: candidateProfile?.targetRoles?.[0] || 'Software Engineer',
+          };
 
       const response = await askCoach({
         messages: updatedMessages,
@@ -177,14 +192,37 @@ export const AiCoach = () => {
           borderRadius: 'var(--radius-xl)',
         }}
       >
+        {/* Candidate Resume Grounding Pill */}
+        {candidateProfile && (
+          <div style={{ padding: '0.85rem', borderRadius: 'var(--radius-md)', background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', letterSpacing: '0.04em' }}>ACTIVE RESUME CONTEXT</span>
+              <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>{candidateProfile.atsScore || 0}% ATS</span>
+            </div>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {candidateProfile.resumeFileName || 'Candidate Profile'}
+            </div>
+            {candidateProfile.extractedSkills?.length > 0 && (
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                Skills: {candidateProfile.extractedSkills.slice(0, 4).join(', ')}...
+              </div>
+            )}
+            {candidateProfile.weakAreas?.length > 0 && (
+              <div style={{ fontSize: '0.72rem', color: 'var(--warning)', marginTop: '0.2rem' }}>
+                Target Gaps: {candidateProfile.weakAreas.slice(0, 2).map(w => w.name).join(', ')}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Context Selector */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <Layers size={18} color="var(--primary)" />
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Grounding Context</h4>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Strategy Profile Grounding</h4>
           </div>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.65rem' }}>
-            Ground the coach with one of your generated job profiles:
+            Optionally combine with one of your generated job profiles:
           </p>
 
           <select
@@ -200,7 +238,7 @@ export const AiCoach = () => {
                 </option>
               ))
             ) : (
-              <option value="">General Tech Context</option>
+              <option value="">General Candidate Profile</option>
             )}
           </select>
 

@@ -10,14 +10,13 @@ import NewInterview from './pages/NewInterview';
 import Interview from './Features/interview/pages/interview';
 import AiCoach from './pages/AiCoach';
 import MockInterview from './pages/MockInterview';
-import ProjectInterview from './pages/ProjectInterview';
 import ResumeAnalyzer from './pages/ResumeAnalyzer';
 import JobAnalyzer from './pages/JobAnalyzer';
 import QuestionBank from './pages/QuestionBank';
 import PreparationRoadmap from './pages/PreparationRoadmap';
 import MyInterviews from './pages/MyInterviews';
-import ProgressAnalytics from './pages/ProgressAnalytics';
 import DailyChallenge from './pages/DailyChallenge';
+import ResumeOnboarding from './pages/ResumeOnboarding';
 
 export const router = createBrowserRouter([
   // Public Marketing Landing Page
@@ -34,6 +33,16 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <Register />,
+  },
+
+  // Mandatory Resume Onboarding (Protected, but allows users without profile)
+  {
+    path: '/app/onboarding',
+    element: (
+      <Protected skipOnboardingCheck={true}>
+        <ResumeOnboarding />
+      </Protected>
+    ),
   },
 
   // Backward compatibility alias for direct report links
@@ -87,7 +96,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'project-interview',
-        element: <ProjectInterview />,
+        element: <Navigate to="/app/mock-interview?type=Project" replace />,
       },
       {
         path: 'resume-analyzer',
@@ -111,7 +120,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'progress',
-        element: <ProgressAnalytics />,
+        element: <Navigate to="/app/dashboard" replace />,
       },
       {
         path: 'daily-challenge',

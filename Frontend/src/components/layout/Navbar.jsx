@@ -28,13 +28,11 @@ export const Navbar = ({ onOpenSidebar }) => {
     if (path.includes('/dashboard')) return 'Dashboard Overview';
     if (path.includes('/coach')) return 'Kaushal AI Coach';
     if (path.includes('/mock-interview')) return 'AI Mock Interview';
-    if (path.includes('/project-interview')) return 'Project Defense Mode';
     if (path.includes('/resume-analyzer')) return 'ATS Resume Diagnostics';
     if (path.includes('/job-analyzer')) return 'Job Description & Skill Matcher';
     if (path.includes('/question-bank')) return 'Curated Question Bank';
     if (path.includes('/roadmap')) return '14-Day Preparation Roadmap';
     if (path.includes('/my-interviews')) return 'My Interview History';
-    if (path.includes('/progress')) return 'Performance Analytics';
     if (path.includes('/daily-challenge')) return 'Daily AI Interview Challenge';
     if (path.includes('/new-interview')) return 'Create AI Interview Strategy';
     if (path.includes('/interview/')) return 'Interview Strategy Report';

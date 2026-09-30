@@ -10,47 +10,61 @@ import {
   Compass,
   AlertTriangle,
   Bot,
-  Mic,
   PlusCircle,
   Clock,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  FileSearch
 } from 'lucide-react';
 import { useAuth } from '../Features/auth/hooks/useAuth';
-import { useInterview } from '../Features/interview/hooks/useInterview';
+import { getDashboardData } from '../Features/interview/services/interview.api';
 
 export const DashboardHome = () => {
   const { user } = useAuth();
-  const { reports, getReports, loading } = useInterview();
   const navigate = useNavigate();
 
-  // Streak & questions practiced stats from storage or defaults
-  const [streak, setStreak] = useState(() => {
-    return parseInt(localStorage.getItem('kaushal_streak') || '4', 10);
-  });
-  const [questionsPracticed, setQuestionsPracticed] = useState(() => {
-    return parseInt(localStorage.getItem('kaushal_practiced_count') || '18', 10);
-  });
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getReports();
+    let isMounted = true;
+    const fetchDashboard = async () => {
+      try {
+        const data = await getDashboardData();
+        if (isMounted) {
+          setDashboardData(data);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchDashboard();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Compute readiness score from user's reports
-  const averageMatch =
-    reports && reports.length > 0
-      ? Math.round(reports.reduce((acc, curr) => acc + (curr.matchScore || 0), 0) / reports.length)
-      : 76;
-
-  const latestReport = reports && reports.length > 0 ? reports[0] : null;
-
-  // Greeting based on time
+  // Greeting based on current time
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
   };
+
+  const readinessScore = dashboardData?.readinessScore || 0;
+  const strategiesCount = dashboardData?.strategiesCount || 0;
+  const questionsPracticed = dashboardData?.questionsPracticed || 0;
+  const streak = dashboardData?.streak || 0;
+  const weakAreas = dashboardData?.weakAreas || [];
+  const competencyAnalysis = dashboardData?.competencyAnalysis || [];
+  const recentStrategies = dashboardData?.recentStrategies || [];
+  const profile = dashboardData?.profile || null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -76,7 +90,13 @@ export const DashboardHome = () => {
             </h2>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', margin: 0 }}>
-            Let's get you interview-ready. You have targeted goals waiting for you today.
+            {profile?.resumeFileName ? (
+              <>
+                Profile active • Grounded in <strong>{profile.resumeFileName}</strong> (ATS {profile.atsScore}%)
+              </>
+            ) : (
+              "Let's get you interview-ready. Complete your first session to track progress."
+            )}
           </p>
         </div>
 
@@ -100,7 +120,7 @@ export const DashboardHome = () => {
         </div>
       </div>
 
-      {/* ── 2. Statistics Grid ── */}
+      {/* ── 2. Statistics Grid (100% Real User Data) ── */}
       <div
         style={{
           display: 'grid',
@@ -129,15 +149,21 @@ export const DashboardHome = () => {
             </div>
           </div>
           <div style={{ fontSize: '2.25rem', fontWeight: 800, marginTop: '0.75rem', color: 'var(--primary)' }}>
-            {averageMatch}%
+            {readinessScore > 0 ? `${readinessScore}%` : '0%'}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.4rem', fontSize: '0.78rem', color: 'var(--success)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.4rem', fontSize: '0.78rem', color: readinessScore > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
             <TrendingUp size={14} />
-            <span>+8% readiness improvement this week</span>
+            <span>
+              {dashboardData?.hasSufficientData
+                ? dashboardData.readinessMessage
+                : profile
+                ? 'Complete your first interview to calculate readiness'
+                : 'Upload your resume to calculate readiness'}
+            </span>
           </div>
         </div>
 
-        {/* Card 2: Interviews Completed */}
+        {/* Card 2: Strategies Formulated */}
         <div className="glass-card" style={{ padding: '1.5rem', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
@@ -158,10 +184,10 @@ export const DashboardHome = () => {
             </div>
           </div>
           <div style={{ fontSize: '2.25rem', fontWeight: 800, marginTop: '0.75rem', color: 'var(--text-primary)' }}>
-            {reports?.length || 0}
+            {strategiesCount}
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
-            Target positions analyzed with Gemini
+            {strategiesCount > 0 ? 'Target positions analyzed with Gemini' : 'No strategies formulated yet'}
           </div>
         </div>
 
@@ -189,11 +215,11 @@ export const DashboardHome = () => {
             {questionsPracticed}
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
-            Technical, behavioral & project questions
+            {questionsPracticed > 0 ? 'Questions answered and AI evaluated' : 'Start your first session'}
           </div>
         </div>
 
-        {/* Card 4: Current Streak */}
+        {/* Card 4: Current Streak (Real) */}
         <div className="glass-card" style={{ padding: '1.5rem', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
@@ -213,16 +239,16 @@ export const DashboardHome = () => {
               <Flame size={18} color="var(--warning)" />
             </div>
           </div>
-          <div style={{ fontSize: '2.25rem', fontWeight: 800, marginTop: '0.75rem', color: 'var(--warning)' }}>
-            {streak} Days 🔥
+          <div style={{ fontSize: '2.25rem', fontWeight: 800, marginTop: '0.75rem', color: streak > 0 ? 'var(--warning)' : 'var(--text-secondary)' }}>
+            {streak} Days {streak > 0 ? '🔥' : ''}
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
-            Consistency unlocks placement success
+            {streak > 0 ? 'Consistency unlocks placement success' : 'Complete today’s drill to start streak'}
           </div>
         </div>
       </div>
 
-      {/* ── 3. Middle Row: Continue Preparation & Skill Analysis ── */}
+      {/* ── 3. Middle Row: Preparation Roadmap & Competency Analysis ── */}
       <div
         style={{
           display: 'grid',
@@ -242,9 +268,13 @@ export const DashboardHome = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Compass size={20} color="var(--primary)" />
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Continue Preparation</h3>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Personalized Roadmap</h3>
             </div>
-            <span className="badge badge-primary">Day 4 of 14</span>
+            {profile ? (
+              <span className="badge badge-primary">{profile.targetRoles?.[0] || 'Software Engineer'}</span>
+            ) : (
+              <span className="badge badge-warning">No Profile Yet</span>
+            )}
           </div>
 
           <div
@@ -257,20 +287,24 @@ export const DashboardHome = () => {
             }}
           >
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-              Current Milestone
+              Target Focus
             </div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.25rem', color: 'var(--text-primary)' }}>
-              React Architecture, Hooks & System State
+              {weakAreas.length > 0 ? weakAreas[0].name : 'Fundamental Technical Drills'}
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
-              Master virtual DOM reconciliation, custom hooks, and concurrent rendering trade-offs.
+              {weakAreas.length > 0
+                ? weakAreas[0].recommendation || 'Strengthen priority skill gaps identified from your resume analysis.'
+                : 'Upload your resume or create an interview strategy to generate your personalized 14-day roadmap.'}
             </p>
 
             {/* Progress bar */}
             <div style={{ marginTop: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Roadmap Completion</span>
-                <span style={{ fontWeight: 700, color: 'var(--primary)' }}>28%</span>
+                <span style={{ color: 'var(--text-muted)' }}>Roadmap Status</span>
+                <span style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                  {questionsPracticed > 0 ? `${Math.min(questionsPracticed * 5, 100)}%` : '0%'}
+                </span>
               </div>
               <div
                 style={{
@@ -283,10 +317,11 @@ export const DashboardHome = () => {
               >
                 <div
                   style={{
-                    width: '28%',
+                    width: `${Math.min(questionsPracticed * 5, 100)}%`,
                     height: '100%',
                     background: 'var(--accent-gradient)',
                     borderRadius: 'var(--radius-full)',
+                    transition: 'width 0.8s ease',
                   }}
                 />
               </div>
@@ -298,12 +333,12 @@ export const DashboardHome = () => {
             className="btn btn-primary"
             style={{ width: '100%', gap: '0.5rem', marginTop: 'auto' }}
           >
-            <span>Continue Preparation</span>
+            <span>View Preparation Roadmap</span>
             <ArrowRight size={16} />
           </button>
         </div>
 
-        {/* Skill Analysis Card */}
+        {/* Dynamic Skill Competency Analysis Card */}
         <div className="glass-card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
@@ -317,121 +352,151 @@ export const DashboardHome = () => {
               <TrendingUp size={20} color="var(--accent-cyan)" />
               <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Competency Analysis</h3>
             </div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Evaluated across roles</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {dashboardData?.hasSufficientData ? 'Grounded in interview data' : 'Baseline evaluation'}
+            </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', flex: 1 }}>
-            {[
-              { skill: 'Technical Skills', level: 82, color: 'var(--primary)' },
-              { skill: 'Behavioral & STAR', level: 75, color: 'var(--accent-cyan)' },
-              { skill: 'Communication Clarity', level: 78, color: 'var(--success)' },
-              { skill: 'Project Architecture', level: 86, color: 'var(--secondary)' },
-              { skill: 'Problem Solving & DSA', level: 68, color: 'var(--warning)' },
-            ].map((item, idx) => (
-              <div key={idx}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    marginBottom: '0.35rem',
-                  }}
-                >
-                  <span style={{ color: 'var(--text-primary)' }}>{item.skill}</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>{item.level}%</span>
-                </div>
-                <div
-                  style={{
-                    width: '100%',
-                    height: '7px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    borderRadius: 'var(--radius-full)',
-                    overflow: 'hidden',
-                  }}
-                >
+            {competencyAnalysis.length > 0 ? (
+              competencyAnalysis.map((item, idx) => (
+                <div key={idx}>
                   <div
                     style={{
-                      width: `${item.level}%`,
-                      height: '100%',
-                      background: item.color,
-                      borderRadius: 'var(--radius-full)',
-                      transition: 'width 0.8s ease',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      marginBottom: '0.35rem',
                     }}
-                  />
+                  >
+                    <span style={{ color: 'var(--text-primary)' }}>{item.skill}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      {item.level > 0 ? `${item.level}%` : '0%'}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '7px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      borderRadius: 'var(--radius-full)',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${item.level}%`,
+                        height: '100%',
+                        background: item.color,
+                        borderRadius: 'var(--radius-full)',
+                        transition: 'width 0.8s ease',
+                      }}
+                    />
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Complete your first mock interview to populate competencies.
               </div>
-            ))}
+            )}
           </div>
 
           <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Prioritize <strong>Problem Solving & DSA</strong> in your next mock session.
+              {weakAreas.length > 0 ? (
+                <>
+                  Prioritize <strong>{weakAreas[0].name}</strong> in your next mock session.
+                </>
+              ) : (
+                'Upload your resume to identify personalized focus competencies.'
+              )}
             </span>
           </div>
         </div>
       </div>
 
-      {/* ── 4. Weak Areas Section ── */}
+      {/* ── 4. Weak Areas Section (Real AI Resume Analysis) ── */}
       <div className="glass-card" style={{ padding: '1.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
           <AlertTriangle size={20} color="var(--warning)" />
           <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Priority Focus & Weak Areas</h3>
         </div>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-          Identified from your resume vs target job descriptions. Review these topics before your interview:
+          {weakAreas.length > 0
+            ? 'Identified from your actual resume and target role benchmarks. Click any area to drill with AI Coach:'
+            : 'No weak areas identified yet. Upload your resume or create an interview strategy to reveal preparation gaps.'}
         </p>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-          {[
-            { name: 'System Design & Scalability', severity: 'high' },
-            { name: 'Microservices & Message Queues', severity: 'high' },
-            { name: 'Advanced JavaScript Event Loop', severity: 'medium' },
-            { name: 'Behavioral Conflict Resolution', severity: 'medium' },
-            { name: 'Database Indexing & Sharding', severity: 'medium' },
-            { name: 'CI/CD & Docker Deployment', severity: 'low' },
-          ].map((area, idx) => (
-            <div
-              key={idx}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                background:
-                  area.severity === 'high'
-                    ? 'var(--danger-bg)'
-                    : area.severity === 'medium'
-                    ? 'var(--warning-bg)'
-                    : 'rgba(99, 102, 241, 0.12)',
-                border:
-                  area.severity === 'high'
-                    ? '1px solid rgba(239, 68, 68, 0.3)'
-                    : area.severity === 'medium'
-                    ? '1px solid rgba(245, 158, 11, 0.3)'
-                    : '1px solid rgba(99, 102, 241, 0.3)',
-                color:
-                  area.severity === 'high'
-                    ? 'var(--danger)'
-                    : area.severity === 'medium'
-                    ? 'var(--warning)'
-                    : 'var(--primary)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-              onClick={() => navigate(`/app/coach?topic=${encodeURIComponent(area.name)}`)}
-              title="Click to ask AI Coach"
+        {weakAreas.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+            {weakAreas.map((area, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.55rem 1.1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background:
+                    area.severity === 'high'
+                      ? 'var(--danger-bg)'
+                      : area.severity === 'medium'
+                      ? 'var(--warning-bg)'
+                      : 'rgba(99, 102, 241, 0.12)',
+                  border:
+                    area.severity === 'high'
+                      ? '1px solid rgba(239, 68, 68, 0.3)'
+                      : area.severity === 'medium'
+                      ? '1px solid rgba(245, 158, 11, 0.3)'
+                      : '1px solid rgba(99, 102, 241, 0.3)',
+                  color:
+                    area.severity === 'high'
+                      ? 'var(--danger)'
+                      : area.severity === 'medium'
+                      ? 'var(--warning)'
+                      : 'var(--primary)',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'transform var(--transition-fast)'
+                }}
+                onClick={() => navigate(`/app/coach?topic=${encodeURIComponent(area.name)}`)}
+                title="Click to drill with AI Coach"
+              >
+                <span>{area.name}</span>
+                <Bot size={14} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '1.5rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-surface-elevated)',
+              border: '1px dashed var(--border-subtle)',
+              textAlign: 'center'
+            }}
+          >
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0 0 1rem 0' }}>
+              Upload your resume in the Resume Analyzer to discover your technical and architectural gaps.
+            </p>
+            <button
+              onClick={() => navigate('/app/resume-analyzer')}
+              className="btn btn-secondary btn-sm"
+              style={{ gap: '0.4rem' }}
             >
-              <span>{area.name}</span>
-              <Bot size={14} />
-            </div>
-          ))}
-        </div>
+              <FileSearch size={15} />
+              <span>Open Resume Analyzer</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ── 5. Recent Interviews List ── */}
+      {/* ── 5. Recent Interviews / Strategies (Real Database Records) ── */}
       <div className="glass-card" style={{ padding: '1.75rem' }}>
         <div
           style={{
@@ -444,22 +509,24 @@ export const DashboardHome = () => {
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Recent Interview Strategies</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Previous job analysis and custom preparation reports
+              Previous job analysis and custom preparation reports belonging to your account
             </p>
           </div>
-          <button
-            onClick={() => navigate('/app/my-interviews')}
-            className="btn btn-ghost btn-sm"
-            style={{ gap: '0.35rem' }}
-          >
-            <span>View All</span>
-            <ChevronRight size={16} />
-          </button>
+          {recentStrategies.length > 0 && (
+            <button
+              onClick={() => navigate('/app/my-interviews')}
+              className="btn btn-ghost btn-sm"
+              style={{ gap: '0.35rem' }}
+            >
+              <span>View All</span>
+              <ChevronRight size={16} />
+            </button>
+          )}
         </div>
 
-        {reports && reports.length > 0 ? (
+        {recentStrategies.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-            {reports.slice(0, 3).map((r) => (
+            {recentStrategies.map((r) => (
               <div
                 key={r._id}
                 onClick={() => navigate(`/app/interview/${r._id}`)}
@@ -545,7 +612,7 @@ export const DashboardHome = () => {
               No interview strategies created yet
             </h4>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Upload your resume and paste a target job description to generate your first AI plan.
+              Paste a target job description to generate your first AI plan and tailored question bank.
             </p>
             <button onClick={() => navigate('/app/new-interview')} className="btn btn-primary btn-sm">
               <PlusCircle size={16} />

@@ -10,432 +10,353 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
-  Award
+  Award,
+  PlusCircle
 } from 'lucide-react';
-
-const ROADMAP_DATA = [
-  {
-    day: 1,
-    focus: 'JavaScript Core & Execution Context',
-    objectives: 'Understand call stack, execution context phases, hoisting, and primitive vs reference types.',
-    tasks: [
-      'Revise memory creation phase and code execution phase',
-      'Code 3 closure examples demonstrating data encapsulation',
-      'Explain pass-by-value vs pass-by-reference in interviews'
-    ],
-    drillQuestion: 'Explain the difference between undefined, null, and undeclared.'
-  },
-  {
-    day: 2,
-    focus: 'Advanced JavaScript & Async Engine',
-    objectives: 'Master Event Loop, Microtasks vs Macrotasks, Promises, and async/await error handling.',
-    tasks: [
-      'Trace Promise microtask queue vs setTimeout macrotask order',
-      'Implement a simple Promise polyfill or Promise.all implementation',
-      'Review prototypal inheritance and prototype chain'
-    ],
-    drillQuestion: 'Why does Promise.then() execute before setTimeout(..., 0)?'
-  },
-  {
-    day: 3,
-    focus: 'React Fundamentals & Component Lifecycle',
-    objectives: 'Master JSX compilation, Virtual DOM, useState, useEffect dependencies, and cleanup functions.',
-    tasks: [
-      'Explain why mutating state directly is an anti-pattern',
-      'Write an effect with abort controller cleanup on component unmount',
-      'Review controlled vs uncontrolled form inputs'
-    ],
-    drillQuestion: 'What causes memory leaks in useEffect and how do you prevent them?'
-  },
-  {
-    day: 4,
-    focus: 'Advanced React & State Management',
-    objectives: 'Deep dive into useMemo, useCallback, Context API, custom hooks, and state machine patterns.',
-    tasks: [
-      'Build a custom useFetch or useDebounce hook with caching',
-      'Benchmark when useMemo causes more overhead than it saves',
-      'Explain how React 18/19 concurrent rendering optimizes rendering'
-    ],
-    drillQuestion: 'When would you pick Context API vs Zustand or Redux Toolkit?'
-  },
-  {
-    day: 5,
-    focus: 'Node.js Internals & Event Loop',
-    objectives: 'Understand libuv thread pool, streams, buffers, and non-blocking I/O architectures.',
-    tasks: [
-      'Explain how Node handles thousands of concurrent I/O connections',
-      'Create a readable and writable stream pipeline for large files',
-      'Analyze cluster mode and worker threads for CPU-bound tasks'
-    ],
-    drillQuestion: 'How does Node.js achieve high concurrency if it runs on a single thread?'
-  },
-  {
-    day: 6,
-    focus: 'MongoDB & Database Architecture',
-    objectives: 'Master document schemas, compound indexes, ESR rule, aggregations, and query optimization.',
-    tasks: [
-      'Run explain("executionStats") on an unindexed vs indexed query',
-      'Construct a 3-stage aggregation pipeline ($match, $group, $sort)',
-      'Review optimistic vs pessimistic locking'
-    ],
-    drillQuestion: 'Explain the ESR (Equality, Sort, Range) rule for compound indexes.'
-  },
-  {
-    day: 7,
-    focus: 'RESTful API Design & Security',
-    objectives: 'Build idempotent endpoints, status codes, JWT auth flow, rate limiting, and CORS headers.',
-    tasks: [
-      'Implement JWT in httpOnly secure cookies with blacklist mechanism',
-      'Add express-rate-limit and helmet security headers',
-      'Design clean REST API resource endpoints with versioning'
-    ],
-    drillQuestion: 'How do you defend against Cross-Site Scripting (XSS) and CSRF attacks in modern SPAs?'
-  },
-  {
-    day: 8,
-    focus: 'Data Structures & Algorithms (Core Patterns)',
-    objectives: 'Practice two-pointers, sliding window, fast/slow pointers, and hash map lookups.',
-    tasks: [
-      'Solve 2 sliding window problems (e.g. longest substring without repeating chars)',
-      'Solve 2 two-pointer problems (e.g. 3Sum or Trapping Rain Water)',
-      'Review time and space complexity tradeoffs'
-    ],
-    drillQuestion: 'Explain the algorithmic intuition behind the two-pointer technique.'
-  },
-  {
-    day: 9,
-    focus: 'System Design & Scalability Principles',
-    objectives: 'Learn horizontal scaling, caching strategies (Redis), CDNs, load balancing, and sharding.',
-    tasks: [
-      'Design a URL shortener or Notification service architecture',
-      'Explain Cache-Aside vs Write-Through caching trade-offs',
-      'Draw database replication and failover architecture'
-    ],
-    drillQuestion: 'How would you architect a caching layer to prevent cache stampedes (thundering herd)?'
-  },
-  {
-    day: 10,
-    focus: 'Project Architecture & Defense',
-    objectives: 'Deeply practice explaining project structure, component boundaries, and technical trade-offs.',
-    tasks: [
-      'Write down high-level project architecture bullet points',
-      'Prepare explanation for: "What happens if 10k users access your app?"',
-      'Identify and defend your biggest technical challenge'
-    ],
-    drillQuestion: 'Walk me through your database schema design and why you chose it.'
-  },
-  {
-    day: 11,
-    focus: 'Behavioral & STAR Scenario Mastery',
-    objectives: 'Formulate STAR answers for conflict resolution, ownership, tight deadlines, and failure.',
-    tasks: [
-      'Draft 3 STAR stories: a conflict, a production failure, and an ambiguous feature',
-      'Practice speaking answers out loud in under 2.5 minutes',
-      'Align responses with target company engineering principles'
-    ],
-    drillQuestion: 'Tell me about a time you made a technical mistake that broke production.'
-  },
-  {
-    day: 12,
-    focus: 'Simulated Mock Interview (Round 1)',
-    objectives: 'Execute a timed 20-minute mock interview session with AI grading.',
-    tasks: [
-      'Complete a technical mock interview in the Mock Interview Room',
-      'Review AI critique on technical accuracy and missing trade-offs',
-      'Redo weak questions with the suggested better answer strategy'
-    ],
-    drillQuestion: 'Take today\'s full round in the AI Mock Interview Room.'
-  },
-  {
-    day: 13,
-    focus: 'Targeted Weak Area Remediation',
-    objectives: 'Address identified skill gaps and refine unclear explanations with Kaushal AI Coach.',
-    tasks: [
-      'Review weak areas flagged on your dashboard',
-      'Ask AI Coach 5 deep dive drill questions on your gap topics',
-      'Refine your resume bullets with quantified impact metrics'
-    ],
-    drillQuestion: 'Ask AI Coach: "Test me on my weakest technical competency."'
-  },
-  {
-    day: 14,
-    focus: 'Final Full-Loop Mock & Placement Polish',
-    objectives: 'Conduct final mixed technical + behavioral mock interview and finalize interview mindset.',
-    tasks: [
-      'Complete a full mixed mock interview round',
-      'Review company research and prepare questions to ask the interviewer',
-      'Ensure high confidence and structured communication'
-    ],
-    drillQuestion: 'What questions will you ask the engineering hiring manager at the end of the interview?'
-  }
-];
+import { getPersonalizedRoadmap } from '../Features/interview/services/interview.api';
 
 export const PreparationRoadmap = () => {
   const navigate = useNavigate();
-
+  const [roadmapData, setRoadmapData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [hasRoadmap, setHasRoadmap] = useState(true);
+  const [emptyMessage, setEmptyMessage] = useState('');
   const [completedTasks, setCompletedTasks] = useState(() => {
     try {
-      const saved = localStorage.getItem('kaushal_global_roadmap_tasks');
+      const saved = localStorage.getItem('kaushal_roadmap_done_tasks');
       return saved ? JSON.parse(saved) : {};
     } catch {
       return {};
     }
   });
 
-  const [openDays, setOpenDays] = useState({ 1: true, 2: true });
+  const [expandedDays, setExpandedDays] = useState({ 1: true });
 
-  const totalTasks = ROADMAP_DATA.reduce((acc, curr) => acc + curr.tasks.length, 0);
-  const finishedCount = Object.values(completedTasks).filter(Boolean).length;
-  const progressPercent = Math.round((finishedCount / totalTasks) * 100);
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRoadmap = async () => {
+      try {
+        const res = await getPersonalizedRoadmap();
+        if (isMounted) {
+          if (res?.hasRoadmap && res?.roadmap?.days?.length > 0) {
+            setRoadmapData(res.roadmap);
+            setHasRoadmap(true);
+          } else {
+            setHasRoadmap(false);
+            setEmptyMessage(res?.message || 'No personalized roadmap yet. Create a strategy to generate your roadmap.');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load roadmap:', err);
+        if (isMounted) {
+          setHasRoadmap(false);
+          setEmptyMessage('No personalized roadmap yet. Create a strategy to generate your roadmap.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-  const toggleTask = (key) => {
-    setCompletedTasks((prev) => {
-      const updated = { ...prev, [key]: !prev[key] };
-      localStorage.setItem('kaushal_global_roadmap_tasks', JSON.stringify(updated));
-      return updated;
-    });
+    fetchRoadmap();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const toggleTask = (dayNum, taskIdx) => {
+    const key = `day_${dayNum}_task_${taskIdx}`;
+    const updated = { ...completedTasks, [key]: !completedTasks[key] };
+    setCompletedTasks(updated);
+    try {
+      localStorage.setItem('kaushal_roadmap_done_tasks', JSON.stringify(updated));
+    } catch (e) {
+      console.warn(e);
+    }
   };
 
-  const toggleDay = (day) => {
-    setOpenDays((prev) => ({ ...prev, [day]: !prev[day] }));
+  const toggleDayExpanded = (dayNum) => {
+    setExpandedDays((prev) => ({
+      ...prev,
+      [dayNum]: !prev[dayNum],
+    }));
   };
+
+  const daysList = roadmapData?.days || [];
+  const totalTasks = daysList.reduce((acc, d) => acc + (d.tasks?.length || 0), 0);
+  const doneCount = Object.values(completedTasks).filter(Boolean).length;
+  const progressPercent = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
 
   return (
     <div style={{ maxWidth: '1050px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Header */}
       <div>
         <h2 style={{ fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-          Personalized <span className="gradient-text">14-Day Interview Roadmap</span>
+          Personalized Preparation <span className="gradient-text">Roadmap</span>
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-          An actionable day-by-day blueprint taking you from core fundamentals to system design, project defense, and live mock rounds.
+          Dynamic day-by-day technical curriculum addressing your genuine resume skill gaps and priority focus areas.
         </p>
       </div>
 
-      {/* Progress Tracking Banner */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '1.75rem 2rem',
-          borderRadius: 'var(--radius-xl)',
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: 'var(--accent-gradient)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Compass size={22} color="#fff" />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>Roadmap Progress Tracker</h3>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
-                {finishedCount} of {totalTasks} milestones completed
-              </p>
-            </div>
-          </div>
-
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary)' }}>
-            {progressPercent}% Complete
-          </div>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '4rem' }}>
+          <Sparkles size={36} color="var(--primary)" style={{ animation: 'spin 2s linear infinite', margin: '0 auto 1rem' }} />
+          <p style={{ color: 'var(--text-secondary)' }}>Generating personalized roadmap based on your weak areas...</p>
         </div>
-
-        {/* Progress bar */}
+      ) : !hasRoadmap ? (
+        /* Empty State */
         <div
+          className="glass-card"
           style={{
-            width: '100%',
-            height: '10px',
-            background: 'rgba(255, 255, 255, 0.08)',
-            borderRadius: 'var(--radius-full)',
-            overflow: 'hidden',
+            padding: '3.5rem 2rem',
+            borderRadius: 'var(--radius-xl)',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem',
           }}
         >
-          <div
-            style={{
-              width: `${progressPercent}%`,
-              height: '100%',
-              background: 'var(--accent-gradient)',
-              borderRadius: 'var(--radius-full)',
-              transition: 'width 0.4s ease',
-            }}
-          />
+          <Compass size={48} color="var(--primary)" />
+          <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0 }}>
+            {emptyMessage || 'No personalized roadmap yet.'}
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: 0, fontSize: '0.95rem' }}>
+            Upload your resume or paste a target job description to synthesize your customized preparation roadmap.
+          </p>
+          <button
+            onClick={() => navigate('/app/new-interview')}
+            className="btn btn-primary"
+            style={{ marginTop: '0.5rem', gap: '0.45rem' }}
+          >
+            <PlusCircle size={16} />
+            <span>Create Your First Strategy</span>
+          </button>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Progress Banner */}
+          <div
+            className="glass-card"
+            style={{
+              padding: '1.75rem 2rem',
+              borderRadius: 'var(--radius-xl)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.5rem',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                <span className="badge badge-primary">{roadmapData.roleTitle || 'Target Role'}</span>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  {daysList.length}-Day Customized Curriculum
+                </span>
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
+                {roadmapData.summary || 'Personalized Weak Area Mastery'}
+              </h3>
+            </div>
 
-      {/* 14 Days List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        {ROADMAP_DATA.map((item) => {
-          const isOpen = !!openDays[item.day];
-          const allTasksDone = item.tasks.every((_, idx) => !!completedTasks[`day_${item.day}_task_${idx}`]);
-
-          return (
-            <div
-              key={item.day}
-              className="glass-card"
-              style={{
-                borderRadius: 'var(--radius-lg)',
-                overflow: 'hidden',
-                borderColor: allTasksDone ? 'rgba(16, 185, 129, 0.4)' : isOpen ? 'var(--border-hover)' : 'var(--border-subtle)',
-              }}
-            >
+            <div style={{ minWidth: '220px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Curriculum Completion</span>
+                <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{progressPercent}%</span>
+              </div>
               <div
-                onClick={() => toggleDay(item.day)}
                 style={{
-                  padding: '1.25rem 1.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  background: allTasksDone ? 'rgba(16, 185, 129, 0.06)' : 'transparent',
+                  width: '100%',
+                  height: '8px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  borderRadius: 'var(--radius-full)',
+                  overflow: 'hidden',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                  <span
-                    className={`badge ${allTasksDone ? 'badge-success' : 'badge-primary'}`}
-                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.75rem' }}
-                  >
-                    Day {item.day}
-                  </span>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-                    {item.focus}
-                  </h4>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  {allTasksDone && (
-                    <span className="badge badge-success" style={{ gap: '0.3rem' }}>
-                      <CheckCircle2 size={13} />
-                      <span>Completed</span>
-                    </span>
-                  )}
-                  <div style={{ color: 'var(--text-muted)' }}>
-                    {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                  </div>
-                </div>
-              </div>
-
-              {isOpen && (
                 <div
                   style={{
-                    padding: '0 1.5rem 1.5rem',
-                    borderTop: '1px solid var(--border-subtle)',
-                    paddingTop: '1.25rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '1.25rem',
+                    width: `${progressPercent}%`,
+                    height: '100%',
+                    background: 'var(--accent-gradient)',
+                    borderRadius: 'var(--radius-full)',
+                    transition: 'width 0.4s ease',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Days Accordion */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {daysList.map((item) => {
+              const isExpanded = !!expandedDays[item.day];
+              const dayTasks = item.tasks || [];
+              const dayTasksDone = dayTasks.filter((_, tIdx) => completedTasks[`day_${item.day}_task_${tIdx}`]).length;
+              const isDayComplete = dayTasks.length > 0 && dayTasksDone === dayTasks.length;
+
+              return (
+                <div
+                  key={item.day}
+                  className="glass-card"
+                  style={{
+                    borderRadius: 'var(--radius-lg)',
+                    overflow: 'hidden',
+                    border: isDayComplete ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
                   }}
                 >
-                  <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: 0 }}>
-                    <strong>Learning Objective:</strong> {item.objectives}
-                  </p>
-
-                  {/* Tasks Checklist */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Actionable Milestones:
-                    </div>
-                    {item.tasks.map((task, tIdx) => {
-                      const taskKey = `day_${item.day}_task_${tIdx}`;
-                      const isDone = !!completedTasks[taskKey];
-
-                      return (
-                        <div
-                          key={tIdx}
-                          onClick={() => toggleTask(taskKey)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            padding: '0.65rem 0.85rem',
-                            borderRadius: 'var(--radius-md)',
-                            background: isDone ? 'var(--success-bg)' : 'var(--bg-surface-elevated)',
-                            border: `1px solid ${isDone ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-subtle)'}`,
-                            cursor: 'pointer',
-                            transition: 'all var(--transition-fast)',
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              borderRadius: '5px',
-                              border: `2px solid ${isDone ? 'var(--success)' : 'var(--border-strong)'}`,
-                              background: isDone ? 'var(--success)' : 'transparent',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {isDone && <CheckCircle2 size={13} color="#fff" />}
-                          </div>
-                          <span
-                            style={{
-                              fontSize: '0.88rem',
-                              color: isDone ? 'var(--text-muted)' : 'var(--text-primary)',
-                              textDecoration: isDone ? 'line-through' : 'none',
-                            }}
-                          >
-                            {task}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Daily Drill Prompt & AI Bridge */}
+                  {/* Day Header Accordion Toggle */}
                   <div
+                    onClick={() => toggleDayExpanded(item.day)}
                     style={{
-                      background: 'var(--bg-surface-elevated)',
-                      padding: '1rem 1.25rem',
-                      borderRadius: 'var(--radius-md)',
+                      padding: '1.25rem 1.5rem',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '0.75rem',
+                      cursor: 'pointer',
+                      background: isExpanded ? 'var(--bg-surface-elevated)' : 'transparent',
                     }}
                   >
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase' }}>
-                        Daily Interview Drill
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '10px',
+                          background: isDayComplete ? 'var(--success-bg)' : 'rgba(99, 102, 241, 0.12)',
+                          color: isDayComplete ? 'var(--success)' : 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        {item.day}
                       </div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{item.drillQuestion}</div>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+                            {item.focus}
+                          </span>
+                          {isDayComplete && (
+                            <span className="badge badge-success" style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem' }}>
+                              Done
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          {dayTasksDone}/{dayTasks.length} tasks completed
+                        </div>
+                      </div>
                     </div>
 
-                    <button
-                      onClick={() =>
-                        navigate(
-                          `/app/coach?prompt=${encodeURIComponent(
-                            `I am on Day ${item.day} of my interview prep roadmap (${item.focus}). Drill me on this question: "${item.drillQuestion}"`
-                          )}`
-                        )
-                      }
-                      className="btn btn-secondary btn-sm"
-                      style={{ gap: '0.4rem' }}
-                    >
-                      <Bot size={15} />
-                      <span>Practice in AI Coach</span>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      {isExpanded ? <ChevronUp size={18} color="var(--text-muted)" /> : <ChevronDown size={18} color="var(--text-muted)" />}
+                    </div>
                   </div>
+
+                  {/* Accordion Content */}
+                  {isExpanded && (
+                    <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+                      {/* Objectives */}
+                      {item.objectives && (
+                        <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+                          {item.objectives}
+                        </p>
+                      )}
+
+                      {/* Tasks Checkbox List */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                          Key Action Tasks
+                        </div>
+                        {dayTasks.map((task, tIdx) => {
+                          const taskKey = `day_${item.day}_task_${tIdx}`;
+                          const isDone = !!completedTasks[taskKey];
+
+                          return (
+                            <div
+                              key={tIdx}
+                              onClick={() => toggleTask(item.day, tIdx)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '0.65rem',
+                                padding: '0.65rem 0.85rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: isDone ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-surface-elevated)',
+                                border: '1px solid var(--border-subtle)',
+                                cursor: 'pointer',
+                                transition: 'all var(--transition-fast)',
+                              }}
+                            >
+                              <div style={{ marginTop: '2px' }}>
+                                {isDone ? (
+                                  <CheckCircle2 size={16} color="var(--success)" />
+                                ) : (
+                                  <Circle size={16} color="var(--text-muted)" />
+                                )}
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: '0.85rem',
+                                  color: isDone ? 'var(--text-muted)' : 'var(--text-primary)',
+                                  textDecoration: isDone ? 'line-through' : 'none',
+                                }}
+                              >
+                                {task}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Drill Interview Question */}
+                      {item.drillQuestion && (
+                        <div
+                          style={{
+                            padding: '1rem',
+                            borderRadius: 'var(--radius-md)',
+                            background: 'rgba(99, 102, 241, 0.08)',
+                            border: '1px solid rgba(99, 102, 241, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '0.75rem',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
+                              Daily Drill Question
+                            </div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                              {item.drillQuestion}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => navigate(`/app/coach?prompt=${encodeURIComponent(item.drillQuestion)}`)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ gap: '0.35rem' }}
+                          >
+                            <Bot size={14} />
+                            <span>Ask AI Coach</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 };

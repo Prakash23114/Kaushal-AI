@@ -1,12 +1,53 @@
-import React from 'react';
-import { Navigate } from 'react-router';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router';
 import { Sparkles } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { getProfileMe } from '../../interview/services/interview.api';
 
-export const Protected = ({ children }) => {
+export const Protected = ({ children, skipOnboardingCheck = false }) => {
   const { loading, user } = useAuth();
+  const location = useLocation();
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [hasProfile, setHasProfile] = useState(null);
 
-  if (loading) {
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkUserProfile = async () => {
+      if (!user) {
+        if (isMounted) setProfileLoading(false);
+        return;
+      }
+
+      try {
+        const data = await getProfileMe();
+        if (isMounted) {
+          setHasProfile(!!data?.hasProfile);
+        }
+      } catch (err) {
+        console.error('Error checking profile:', err);
+        if (isMounted) {
+          setHasProfile(false);
+        }
+      } finally {
+        if (isMounted) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    if (user) {
+      checkUserProfile();
+    } else if (!loading) {
+      setProfileLoading(false);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, loading, location.pathname]);
+
+  if (loading || (user && profileLoading)) {
     return (
       <div
         style={{
@@ -35,7 +76,7 @@ export const Protected = ({ children }) => {
           <Sparkles size={24} color="var(--primary)" />
         </div>
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Authenticating Kaushal AI session...
+          Authenticating Kaushal AI profile...
         </p>
       </div>
     );
@@ -43,6 +84,16 @@ export const Protected = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Mandatory Resume Onboarding check
+  if (!skipOnboardingCheck && hasProfile === false) {
+    return <Navigate to="/app/onboarding" replace />;
+  }
+
+  // If user already has profile and visits /app/onboarding, send to dashboard
+  if (skipOnboardingCheck && hasProfile === true && location.pathname === '/app/onboarding') {
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   return children;

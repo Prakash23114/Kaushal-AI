@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileSearch,
   Upload,
@@ -10,9 +10,10 @@ import {
   X,
   Layers,
   Award,
-  ArrowRight
+  ArrowRight,
+  FolderGit2
 } from 'lucide-react';
-import { analyzeResume } from '../Features/interview/services/interview.api';
+import { analyzeResume, getProfileMe } from '../Features/interview/services/interview.api';
 
 export const ResumeAnalyzer = () => {
   const [resumeFile, setResumeFile] = useState(null);
@@ -20,8 +21,28 @@ export const ResumeAnalyzer = () => {
   const [targetRole, setTargetRole] = useState('Full Stack Developer');
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const fileInputRef = useRef();
+
+  // Load existing CandidateProfile on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const res = await getProfileMe();
+        if (res?.profile) {
+          setCurrentProfile(res.profile);
+          if (res.profile.targetRoles?.[0]) {
+            setTargetRole(res.profile.targetRoles[0]);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load profile:', err);
+      }
+    };
+    loadProfile();
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -32,6 +53,7 @@ export const ResumeAnalyzer = () => {
       }
       setResumeFile(file);
       setErrorMsg('');
+      setSuccessMsg('');
     }
   };
 
@@ -44,6 +66,7 @@ export const ResumeAnalyzer = () => {
 
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
     try {
       const response = await analyzeResume({
         resumeFile,
@@ -51,8 +74,12 @@ export const ResumeAnalyzer = () => {
         targetRole,
       });
 
-      if (response && response.analysis) {
+      if (response && (response.analysis || response.profile)) {
         setAnalysis(response.analysis);
+        if (response.profile) {
+          setCurrentProfile(response.profile);
+        }
+        setSuccessMsg('Resume re-analyzed successfully! Candidate profile and dashboard have been updated.');
       } else {
         setErrorMsg('Failed to analyze resume. Please try again.');
       }
@@ -64,6 +91,8 @@ export const ResumeAnalyzer = () => {
     }
   };
 
+  const displayData = analysis || currentProfile;
+
   return (
     <div style={{ maxWidth: '1050px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Header */}
@@ -73,10 +102,11 @@ export const ResumeAnalyzer = () => {
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
           Evaluate ATS compatibility, keyword density, technical depth, project metrics, and role alignment.
+          Re-analyzing your resume automatically updates your Kaushal AI candidate profile and dashboard.
         </p>
       </div>
 
-      {/* Input Card */}
+      {/* Input / Upload Card */}
       <div className="glass-card" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)' }}>
         <form onSubmit={handleAnalyze} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {errorMsg && (
@@ -97,11 +127,29 @@ export const ResumeAnalyzer = () => {
             </div>
           )}
 
+          {successMsg && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.85rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--success-bg)',
+                color: 'var(--success)',
+                fontSize: '0.88rem',
+              }}
+            >
+              <CheckCircle2 size={18} />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
             {/* Upload PDF */}
             <div>
               <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                Upload Resume PDF
+                Upload New Resume PDF
               </label>
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -130,174 +178,204 @@ export const ResumeAnalyzer = () => {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-                    <Upload size={28} color="var(--text-muted)" />
-                    <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>Select PDF or DOCX</span>
+                    <Upload size={28} color="var(--primary)" />
+                    <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>
+                      {currentProfile?.resumeFileName ? `Replace ${currentProfile.resumeFileName}` : 'Choose PDF file or drop here'}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>PDF, DOCX up to 5MB</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Target Role & Paste option */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {/* Target Role & Text Input */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '0.4rem' }}>
                   Target Role
                 </label>
-                <input
-                  type="text"
+                <select
                   value={targetRole}
                   onChange={(e) => setTargetRole(e.target.value)}
-                  placeholder="e.g. Senior Frontend Engineer"
                   className="input-field"
-                />
+                >
+                  <option value="Full Stack Developer">Full Stack Developer</option>
+                  <option value="Frontend Developer">Frontend Developer</option>
+                  <option value="Backend Developer">Backend Developer</option>
+                  <option value="Software Engineer">Software Engineer</option>
+                  <option value="AI / ML Engineer">AI / ML Engineer</option>
+                  <option value="DevOps / Cloud Engineer">DevOps / Cloud Engineer</option>
+                </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                  Or Paste Text
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                  Or paste resume text directly:
                 </label>
                 <textarea
                   rows={3}
                   value={resumeText}
                   onChange={(e) => setResumeText(e.target.value)}
-                  placeholder="Paste resume content here if you do not have a PDF..."
+                  placeholder="Paste text if you don't have a PDF file..."
                   className="textarea-field"
                 />
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" disabled={loading} className="btn btn-primary" style={{ gap: '0.5rem' }}>
-              <Sparkles size={16} />
-              <span>{loading ? 'Analyzing with Gemini...' : 'Analyze Resume'}</span>
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn btn-primary"
+            style={{ width: '100%', padding: '0.85rem', gap: '0.5rem', borderRadius: 'var(--radius-md)' }}
+          >
+            <Sparkles size={18} />
+            <span>{loading ? 'Re-analyzing with Gemini AI...' : 'Re-analyze & Update Profile'}</span>
+          </button>
         </form>
       </div>
 
-      {/* ── Visual Analysis Results ── */}
-      {analysis && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* 4 Score Gauges */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '1.25rem',
-            }}
-          >
-            {[
-              { label: 'ATS Compatibility', score: analysis.atsScore, color: 'var(--primary)' },
-              { label: 'Technical Depth', score: analysis.technicalStrength, color: 'var(--success)' },
-              { label: 'Project Impact', score: analysis.projectStrength, color: 'var(--secondary)' },
-              { label: 'Role Suitability', score: analysis.roleRelevance, color: 'var(--accent-cyan)' },
-            ].map((metric, idx) => (
-              <div key={idx} className="glass-card" style={{ padding: '1.5rem', textAlign: 'center' }}>
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '50%',
-                    border: `4px solid ${metric.color}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.35rem',
-                    fontWeight: 800,
-                    margin: '0 auto 0.75rem',
-                    color: metric.color,
-                  }}
-                >
-                  {metric.score}%
-                </div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{metric.label}</div>
+      {/* Diagnostics Results Display */}
+      {displayData && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Top Score Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div className="glass-card" style={{ padding: '1.5rem', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>ATS READINESS SCORE</span>
+              <div style={{ fontSize: '2.75rem', fontWeight: 900, color: 'var(--primary)', marginTop: '0.25rem' }}>
+                {displayData.atsScore || 70}%
               </div>
-            ))}
+              <div style={{ fontSize: '0.78rem', color: 'var(--success)' }}>
+                Machine parseability evaluated
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: '1.5rem', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>TECHNICAL STRENGTH</span>
+              <div style={{ fontSize: '2.75rem', fontWeight: 900, color: 'var(--accent-cyan)', marginTop: '0.25rem' }}>
+                {displayData.technicalStrength || 75}%
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Tech stack depth
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: '1.5rem', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>PROJECT ARCHITECTURE</span>
+              <div style={{ fontSize: '2.75rem', fontWeight: 900, color: 'var(--secondary)', marginTop: '0.25rem' }}>
+                {displayData.projectStrength || 75}%
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Demonstrated complexity
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: '1.5rem', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>ROLE RELEVANCE</span>
+              <div style={{ fontSize: '2.75rem', fontWeight: 900, color: 'var(--warning)', marginTop: '0.25rem' }}>
+                {displayData.roleRelevance || 75}%
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Target role alignment
+              </div>
+            </div>
           </div>
 
-          {/* Missing Keywords & Extracted Skills */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-            {/* Missing Keywords */}
+          {/* Extracted Skills */}
+          {displayData.extractedSkills?.length > 0 && (
             <div className="glass-card" style={{ padding: '1.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <AlertCircle size={20} color="var(--danger)" />
-                <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>High-Impact Missing Keywords</h4>
-              </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                Include these industry keywords to clear recruiter ATS automated screening:
-              </p>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+                Extracted Skills & Technologies
+              </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {analysis.missingKeywords?.map((kw, i) => (
-                  <span key={i} className="badge badge-danger" style={{ fontSize: '0.8rem', padding: '0.35rem 0.65rem' }}>
-                    + {kw}
+                {displayData.extractedSkills.map((skill, idx) => (
+                  <span key={idx} className="badge badge-primary">
+                    {skill}
                   </span>
                 ))}
               </div>
             </div>
+          )}
 
-            {/* Extracted Skills */}
+          {/* Projects Detected */}
+          {displayData.projects?.length > 0 && (
             <div className="glass-card" style={{ padding: '1.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <CheckCircle2 size={20} color="var(--success)" />
-                <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Demonstrated Skills Found</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <FolderGit2 size={18} color="var(--primary)" />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Resume Projects</h3>
               </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                Verified skills successfully recognized in your resume:
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {analysis.extractedSkills?.map((sk, i) => (
-                  <span key={i} className="badge badge-success" style={{ fontSize: '0.8rem', padding: '0.35rem 0.65rem' }}>
-                    {sk}
-                  </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {displayData.projects.map((proj, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: '1rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--bg-surface-elevated)',
+                      border: '1px solid var(--border-subtle)'
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                      {proj.title}
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--primary)', marginTop: '0.25rem' }}>
+                      Technologies: {proj.techStack?.join(', ') || 'N/A'}
+                    </div>
+                    {proj.description && (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0 0' }}>
+                        {proj.description}
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Weak Sections & Specific Fixes */}
-          <div className="glass-card" style={{ padding: '1.75rem' }}>
-            <h4 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem' }}>
-              Section-by-Section Revisions
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {analysis.weakSections?.map((ws, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: 'var(--bg-surface-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '1.25rem',
-                    borderRadius: 'var(--radius-md)',
-                  }}
-                >
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--warning)', marginBottom: '0.35rem' }}>
-                    Section: {ws.section}
+          {/* Weak Areas & Improvement Priorities */}
+          {displayData.weakAreas?.length > 0 && (
+            <div className="glass-card" style={{ padding: '1.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <AlertCircle size={18} color="var(--warning)" />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Identified Weak Areas</h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {displayData.weakAreas.map((w, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: '0.85rem 1rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: w.severity === 'high' ? 'var(--danger-bg)' : 'var(--warning-bg)',
+                      border: `1px solid ${w.severity === 'high' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, color: w.severity === 'high' ? 'var(--danger)' : 'var(--warning)' }}>
+                      {w.name} ({w.severity.toUpperCase()} Priority)
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
+                      {w.recommendation}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                    <strong>Detected Issue:</strong> {ws.issue}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
-                    <strong>Actionable Fix:</strong> {ws.recommendation}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Actionable Suggestions */}
-          <div className="glass-card" style={{ padding: '1.75rem' }}>
-            <h4 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem' }}>
-              Actionable Optimization Checklist
-            </h4>
-            <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem' }}>
-              {analysis.actionableSuggestions?.map((sug, i) => (
-                <li key={i} style={{ color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                  {sug}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Actionable Recommendations */}
+          {displayData.recommendations?.length > 0 && (
+            <div className="glass-card" style={{ padding: '1.75rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+                Actionable Optimization Steps
+              </h3>
+              <ul style={{ margin: 0, paddingLeft: '1.25rem', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                {displayData.recommendations.map((rec, idx) => (
+                  <li key={idx} style={{ marginBottom: '0.4rem' }}>{rec}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>

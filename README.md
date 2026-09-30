@@ -46,11 +46,21 @@ An intelligent, full-stack AI interview preparation platform designed for studen
 - Extracts core mandatory requirements, preferred bonus skills, day-to-day responsibilities, and generates matching vs missing skill comparisons.
 
 ### 9. Interactive 14-Day Preparation Roadmap
-- Day-by-day structured curriculum (JavaScript, React, Node.js, MongoDB, REST APIs, DSA, System Design, Project Defense, Behavioral STAR, and Full-Loop Mocks) with checkable milestones and persistent progress tracking.
+
+- A personalized day-by-day preparation roadmap generated based on the candidate's identified skill gaps, weaknesses, target role, resume, and job description.
+- Provides focused learning tasks, practice activities, revision, mock interviews, and improvement areas based on the candidate's needs.
+- Includes checkable milestones for each day to track preparation progress.
+- Progress is persistently saved so candidates can continue their preparation from where they left off.
+- The roadmap dynamically adapts to the candidate's performance and remaining skill gaps.
 
 ### 10. Curated Question Bank
-- Categorized by JavaScript, React, Node.js, MongoDB, System Design, DSA, GenAI, Behavioral, and Projects.
-- Filter by topic and difficulty, with expandable concept overviews, model answers, bookmarking, and direct bridge to AI Coach for deep-dives.
+
+- Dynamically generated based on the target job description, required skills, candidate's resume, and identified skill gaps.
+- Questions are prioritized according to the skills, responsibilities, and requirements mentioned in the job description.
+- Difficulty and question distribution adapt to the candidate's experience level and preparation needs.
+- Includes concept overviews, model answers, explanations, and bookmarking for important questions.
+- Candidates can practice job-specific questions and track their preparation progress.
+- Provides a direct bridge to the AI Coach for deeper explanations, follow-up questions, and personalized guidance.
 
 ### 11. Performance Analytics
 - Data visualizations powered by **Recharts**: Weekly readiness trend (AreaChart), practice distribution by technology (BarChart), and 360° candidate competency radar (RadarChart).

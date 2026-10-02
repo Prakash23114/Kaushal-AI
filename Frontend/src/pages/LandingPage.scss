@@ -1,0 +1,316 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap');
+
+/* ── Kaushal AI Warm Career-Learning Theme Scoped System ── */
+.kaushal-landing {
+  /* Warm Color Palette */
+  --lp-bg: #FFF9F1;
+  --lp-bg-card: #FFFFFF;
+  --lp-primary: #C94F2D;
+  --lp-primary-hover: #A93E22;
+  --lp-primary-light: #FBF0EB;
+  --lp-primary-border: #F1CEBE;
+  --lp-text-dark: #172033;
+  --lp-text-secondary: #3D4A61;
+  --lp-text-muted: #667085;
+  --lp-white: #FFFFFF;
+
+  /* Pastel Accents */
+  --lp-peach: #F8D9C8;
+  --lp-peach-light: #FDF3EC;
+  --lp-green: #8BAF8B;
+  --lp-green-light: #F0F6F0;
+  --lp-green-dark: #2F692F;
+  --lp-yellow: #F2C66D;
+  --lp-yellow-light: #FEF9EE;
+  --lp-yellow-dark: #8C6212;
+  --lp-blue-soft: #DCEAF7;
+  --lp-blue-light: #F2F8FD;
+  --lp-blue-dark: #2C6B9E;
+  --lp-lavender-soft: #EDE8F5;
+  --lp-lavender-light: #F8F5FC;
+  --lp-lavender-dark: #634B87;
+  --lp-pink-soft: #FCE6EB;
+  --lp-pink-light: #FFF2F5;
+  --lp-pink-dark: #9E3758;
+
+  /* Borders & Shadows */
+  --lp-border: #F0E4D5;
+  --lp-border-subtle: #F6EEE3;
+  --lp-shadow-sm: 0 2px 8px rgba(23, 32, 51, 0.04);
+  --lp-shadow-md: 0 8px 24px rgba(23, 32, 51, 0.06);
+  --lp-shadow-lg: 0 16px 36px rgba(23, 32, 51, 0.08);
+  --lp-shadow-terracotta: 0 6px 18px rgba(201, 79, 45, 0.22);
+  --lp-shadow-card-hover: 0 12px 24px rgba(23, 32, 51, 0.08);
+
+  /* Typography */
+  --font-lp-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-lp-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-lp-handwritten: 'Caveat', cursive;
+
+  /* Layout */
+  --lp-container-max: 1260px;
+
+  /* Root styles */
+  min-height: 100vh;
+  background-color: var(--lp-bg);
+  color: var(--lp-text-dark);
+  font-family: var(--font-lp-body);
+  position: relative;
+  overflow-x: hidden;
+  line-height: 1.55;
+
+  /* Reset headings inside landing */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-lp-heading);
+    color: var(--lp-text-dark);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    color: var(--lp-text-secondary);
+  }
+
+  /* ── Universal Container ── */
+  .lp-container {
+    max-width: var(--lp-container-max);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Section Headers ── */
+  .lp-section-header {
+    text-align: left;
+    margin-bottom: 2.5rem;
+
+    .lp-section-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background-color: var(--lp-peach);
+      color: var(--lp-primary);
+      border: 1px solid var(--lp-primary-border);
+      margin-bottom: 0.75rem;
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      color: var(--lp-text-dark);
+    }
+
+    p {
+      font-size: 0.98rem;
+      color: var(--lp-text-muted);
+      line-height: 1.5;
+      max-width: 620px;
+    }
+  }
+
+  /* ── Terracotta Highlights & Brush Strokes ── */
+  .terracotta-highlight {
+    color: var(--lp-primary);
+    position: relative;
+    display: inline-block;
+
+    .brush-underline {
+      position: absolute;
+      left: 0;
+      bottom: -6px;
+      width: 100%;
+      height: 12px;
+      pointer-events: none;
+      path {
+        stroke: var(--lp-primary);
+        stroke-width: 4;
+        stroke-linecap: round;
+        fill: none;
+      }
+    }
+  }
+
+  /* ── Buttons ── */
+  .lp-btn-primary {
+    background-color: var(--lp-primary);
+    color: var(--lp-white);
+    font-weight: 700;
+    padding: 0.8rem 1.65rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    box-shadow: var(--lp-shadow-terracotta);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+
+    &:hover {
+      background-color: var(--lp-primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(201, 79, 45, 0.3);
+      color: var(--lp-white);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  .lp-btn-secondary {
+    background-color: var(--lp-white);
+    color: var(--lp-text-dark);
+    font-weight: 600;
+    padding: 0.8rem 1.5rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--lp-border);
+    box-shadow: var(--lp-shadow-sm);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover {
+      background-color: #FAF4EB;
+      border-color: #E2D3C0;
+      transform: translateY(-1px);
+      color: var(--lp-text-dark);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Handwritten Sticky Notes ── */
+  .handwritten-note {
+    font-family: var(--font-lp-handwritten);
+    font-size: 1.18rem;
+    line-height: 1.25;
+    padding: 0.75rem 1.15rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(23, 32, 51, 0.08);
+    position: relative;
+    display: inline-block;
+    user-select: none;
+    z-index: 2;
+
+    &.note-yellow {
+      background-color: #FFF2B2;
+      color: #5C4813;
+      border: 1px solid #F5E095;
+    }
+
+    &.note-peach {
+      background-color: #FFE6D6;
+      color: #6E321E;
+      border: 1px solid #F2C8B0;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: 35%;
+      width: 28px;
+      height: 9px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 2px;
+    }
+  }
+
+  /* ── Hand-drawn Arrow with Text ── */
+  .handwritten-arrow-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-lp-handwritten);
+    font-size: 1.28rem;
+    color: var(--lp-primary);
+
+    svg {
+      width: 36px;
+      height: 24px;
+    }
+  }
+
+  /* ── Book Stack Element ── */
+  .book-stack {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 3px;
+    width: 125px;
+
+    .book-spine {
+      height: 22px;
+      border-radius: 3px 5px 5px 3px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #ffffff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+      border-left: 3px solid rgba(0, 0, 0, 0.25);
+
+      &.book-practice {
+        background: #C94F2D;
+        width: 125px;
+      }
+      &.book-learn {
+        background: #E58652;
+        width: 120px;
+      }
+      &.book-grow {
+        background: #5B8B67;
+        width: 115px;
+      }
+      &.book-hired {
+        background: #1E324D;
+        width: 122px;
+      }
+    }
+  }
+
+  /* ── Cards ── */
+  .lp-card {
+    background-color: var(--lp-white);
+    border: 1px solid var(--lp-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--lp-shadow-sm);
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--lp-shadow-card-hover);
+      border-color: #E2D2BE;
+    }
+  }
+}
+
+/* ── Prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .kaushal-landing * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

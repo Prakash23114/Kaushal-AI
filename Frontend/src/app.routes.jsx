@@ -2,6 +2,7 @@ import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import Login from './Features/auth/pages/Login';
 import Register from './Features/auth/pages/Register';
+import VerifyEmail from './Features/auth/pages/VerifyEmail';
 import Protected from './Features/auth/components/Protected';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -33,6 +34,14 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '/verify-email',
+    element: <VerifyEmail />,
+  },
+  {
+    path: '/verify-otp',
+    element: <VerifyEmail />,
   },
 
   // Mandatory Resume Onboarding (Protected, but allows users without profile)

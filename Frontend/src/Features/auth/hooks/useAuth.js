@@ -1,6 +1,6 @@
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../context/auth.context.jsx";
-import { login, register, logout, getMe } from "../services/auth.api.js";  
+import { login, register, verifyOtp, resendOtp, logout, getMe } from "../services/auth.api.js";  
 
 export const useAuth = () => {
 
@@ -29,16 +29,46 @@ export const useAuth = () => {
         setLoading(true)
         try {
             const data = await register({ username, email, password })
+            if (data?.requiresVerification) {
+                return data
+            }
             if (data?.user) {
                 setUser(data.user)
                 return { success: true, user: data.user }
             }
-            throw new Error("Unable to register.")
+            return data
         } catch (err) {
             console.error("Register error:", err)
             throw err
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleVerifyOtp = async ({ email, otp }) => {
+        setLoading(true)
+        try {
+            const data = await verifyOtp({ email, otp })
+            if (data?.user) {
+                setUser(data.user)
+                return { success: true, user: data.user, message: data.message }
+            }
+            return data
+        } catch (err) {
+            console.error("Verify OTP error:", err)
+            throw err
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleResendOtp = async ({ email }) => {
+        try {
+            const data = await resendOtp({ email })
+            return data
+        } catch (err) {
+            console.error("Resend OTP error:", err)
+            throw err
         }
     }
 
@@ -85,5 +115,5 @@ export const useAuth = () => {
         }
     }, [])
 
-    return { user, loading, handleRegister, handleLogin, handleLogout }
+    return { user, loading, handleRegister, handleVerifyOtp, handleResendOtp, handleLogin, handleLogout }
 }

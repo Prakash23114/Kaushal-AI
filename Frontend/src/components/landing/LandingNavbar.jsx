@@ -5,7 +5,7 @@ import { useAuth } from '../../Features/auth/hooks/useAuth';
 
 export const LandingNavbar = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, handleLogout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -207,10 +207,33 @@ export const LandingNavbar = () => {
           }}
         >
           {user ? (
-            <button onClick={() => navigate('/app/dashboard')} className="lp-btn-primary">
-              <span>Go to Dashboard</span>
-              <ArrowRight size={17} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                onClick={async () => {
+                  await handleLogout();
+                  navigate('/login');
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--lp-text-secondary)',
+                  fontWeight: 600,
+                  fontSize: '0.94rem',
+                  padding: '0.5rem 0.85rem',
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--lp-peach-light)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                Log Out
+              </button>
+              <button onClick={() => navigate('/app/dashboard')} className="lp-btn-primary">
+                <span>Go to Dashboard</span>
+                <ArrowRight size={17} />
+              </button>
+            </div>
           ) : (
             <>
               <button
@@ -334,16 +357,29 @@ export const LandingNavbar = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
             {user ? (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  navigate('/app/dashboard');
-                }}
-                className="lp-btn-primary"
-                style={{ width: '100%' }}
-              >
-                Go to Dashboard
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate('/app/dashboard');
+                  }}
+                  className="lp-btn-primary"
+                  style={{ width: '100%' }}
+                >
+                  Go to Dashboard
+                </button>
+                <button
+                  onClick={async () => {
+                    setMobileMenuOpen(false);
+                    await handleLogout();
+                    navigate('/login');
+                  }}
+                  className="lp-btn-secondary"
+                  style={{ width: '100%' }}
+                >
+                  Log Out
+                </button>
+              </>
             ) : (
               <>
                 <button

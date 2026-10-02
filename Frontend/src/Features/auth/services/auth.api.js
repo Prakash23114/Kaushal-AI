@@ -15,6 +15,33 @@ export async function register({ username, email, password }) {
         return response.data;
     } catch (error) {
         const message = error.response?.data?.message || "Registration failed. Please try again.";
+        const err = new Error(message);
+        err.response = error.response;
+        throw err;
+    }
+}
+
+export async function verifyOtp({ email, otp }) {
+    try {
+        const response = await api.post("/verify-otp", {
+            email,
+            otp
+        });
+        return response.data;
+    } catch (error) {
+        const message = error.response?.data?.message || "OTP verification failed. Please try again.";
+        throw new Error(message);
+    }
+}
+
+export async function resendOtp({ email }) {
+    try {
+        const response = await api.post("/resend-otp", {
+            email
+        });
+        return response.data;
+    } catch (error) {
+        const message = error.response?.data?.message || "Failed to resend verification code.";
         throw new Error(message);
     }
 }
@@ -28,7 +55,13 @@ export async function login({ email, password }) {
         return response.data;
     } catch (error) {
         const message = error.response?.data?.message || "Login failed. Please check your credentials.";
-        throw new Error(message);
+        const err = new Error(message);
+        err.response = error.response;
+        if (error.response?.data?.requiresVerification) {
+            err.requiresVerification = true;
+            err.email = error.response.data.email;
+        }
+        throw err;
     }
 }
 
@@ -50,4 +83,26 @@ export async function getMe() {
         return null;
     }
 }
+
+/**
+ * Redirects the browser to Google OAuth authorization endpoint
+ */
+export function loginWithGoogle() {
+    window.location.href = "http://localhost:4000/api/auth/google";
+}
+
+/**
+ * Authenticates with Google ID token from frontend SDK
+ */
+export async function googleTokenLogin(credential) {
+    try {
+        const response = await api.post("/google/token", { credential });
+        return response.data;
+    } catch (error) {
+        const message = error.response?.data?.message || "Google authentication failed. Please try again.";
+        throw new Error(message);
+    }
+}
+
+
 

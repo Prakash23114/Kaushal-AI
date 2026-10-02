@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router';
 import { Sparkles, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 export const Login = () => {
   const { loading, handleLogin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const err = params.get('error');
+    if (err) {
+      setErrorMsg(decodeURIComponent(err));
+    }
+  }, [location.search]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,6 +35,11 @@ export const Login = () => {
       await handleLogin({ email, password });
       navigate('/app/dashboard');
     } catch (err) {
+      if (err.requiresVerification || err.response?.data?.requiresVerification) {
+        const verifyEmail = err.email || err.response?.data?.email || email;
+        navigate('/verify-email', { state: { email: verifyEmail } });
+        return;
+      }
       setErrorMsg(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setSubmitting(false);
@@ -125,6 +140,35 @@ export const Login = () => {
             <span>{errorMsg}</span>
           </div>
         )}
+
+        {/* Continue with Google */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <GoogleAuthButton text="Continue with Google" />
+        </div>
+
+        {/* Subtle Divider */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.85rem',
+            marginBottom: '1.35rem',
+          }}
+        >
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+          <span
+            style={{
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            or continue with email
+          </span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+        </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
           <div>

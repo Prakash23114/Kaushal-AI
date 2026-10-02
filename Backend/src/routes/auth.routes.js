@@ -11,6 +11,20 @@ const authRouter = Router()
  */
 authRouter.post("/register", authController.registerUserController)
 
+/**
+ * @route POST /api/auth/verify-otp
+ * @description Verify 6-digit email OTP and authenticate user
+ * @access Public
+ */
+authRouter.post("/verify-otp", authController.verifyOtpController)
+
+/**
+ * @route POST /api/auth/resend-otp
+ * @description Resend a fresh 6-digit OTP code to user's email
+ * @access Public
+ */
+authRouter.post("/resend-otp", authController.resendOtpController)
+
 
 /**
  * @route POST /api/auth/login
@@ -37,5 +51,32 @@ authRouter.post("/logout", authController.logoutUserController)
 authRouter.get("/get-me", authMiddleware.authUser, authController.getMeController)
 authRouter.get("/me", authMiddleware.authUser, authController.getMeController)
 
+/**
+ * @route POST /api/auth/test-email
+ * @description Send a test welcome registration email
+ * @access Public
+ */
+authRouter.post("/test-email", authController.sendTestEmailController)
+
+/**
+ * @route GET /api/auth/google
+ * @description Redirect to Google OAuth2 consent screen
+ * @access Public
+ */
+authRouter.get("/google", authController.initiateGoogleLogin)
+
+/**
+ * @route GET /api/auth/google/callback
+ * @description Google OAuth2 callback endpoint
+ * @access Public
+ */
+authRouter.get("/google/callback", authController.googleCallbackController)
+
+/**
+ * @route POST /api/auth/google/token
+ * @description Client-side Google ID token login/register
+ * @access Public
+ */
+authRouter.post("/google/token", authController.googleTokenLoginController)
 
 module.exports = authRouter

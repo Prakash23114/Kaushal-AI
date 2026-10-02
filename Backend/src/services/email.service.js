@@ -305,6 +305,99 @@ The Kaushal AI Team
   return await sendEmail(userEmail, subject, text, html);
 }
 
+/**
+ * Send 6-digit password reset OTP email
+ * @param {string} userEmail Recipient email address
+ * @param {string} name User's username or full name
+ * @param {string} otp 6-digit numeric OTP code
+ */
+async function sendPasswordResetEmail(userEmail, name, otp) {
+  const displayName = name || "Learner";
+  const subject = `${otp} is your Kaushal AI password reset code 🔐`;
+
+  const text = `
+Reset Your Password - Kaushal AI
+
+Hi ${displayName},
+
+We received a request to reset your password for Kaushal AI. Use the 6-digit verification code below to proceed:
+
+Reset Code: ${otp}
+
+This code will expire in 15 minutes. If you did not request a password reset, please ignore this email or secure your account.
+
+Best regards,
+The Kaushal AI Team
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your Password - Kaushal AI</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f1f5f9;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0b0f19; width: 100%; min-height: 100vh; padding: 40px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 520px; background-color: #111827; border: 1px solid rgba(194, 87, 43, 0.35); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; background: linear-gradient(135deg, rgba(194, 87, 43, 0.2) 0%, rgba(249, 115, 22, 0.1) 100%); border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: center;">
+              <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span style="font-size: 26px;">🎓</span>
+                <span style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">Kaushal <span style="color: #ea580c;">AI</span></span>
+              </div>
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #ffffff;">
+                Reset Your Password
+              </h1>
+              <p style="margin: 8px 0 0 0; font-size: 14px; color: #94a3b8;">
+                Enter the code below to set a new password
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px;">
+              <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 24px; color: #f8fafc;">
+                Hi <strong style="color: #ea580c;">${displayName}</strong>,
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 22px; color: #94a3b8;">
+                We received a request to reset your password. Use the 6-digit verification code below to set up a new password:
+              </p>
+              <div style="text-align: center; margin: 28px 0;">
+                <div style="display: inline-block; padding: 16px 32px; background-color: #1e293b; border: 2px dashed #ea580c; border-radius: 12px; letter-spacing: 12px; font-size: 36px; font-weight: 800; color: #ea580c; font-family: 'Courier New', monospace; box-shadow: 0 4px 20px rgba(234, 88, 12, 0.15);">
+                  ${otp}
+                </div>
+              </div>
+              <div style="padding: 12px 16px; background-color: rgba(234, 88, 12, 0.08); border-radius: 8px; border-left: 3px solid #ea580c; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 20px;">
+                  ⏱️ <strong>Note:</strong> This password reset code expires in <strong>15 minutes</strong>. Never share this code with anyone.
+                </p>
+              </div>
+              <p style="margin: 0; font-size: 12px; line-height: 18px; color: #64748b; text-align: center;">
+                If you did not request this password reset, please ignore this email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 32px; background-color: #0f172a; border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #475569;">
+                &copy; 2026 Kaushal AI &bull; Your Personal AI Interview Coach
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  return await sendEmail(userEmail, subject, text, html);
+}
+
 // Backward compatibility stubs
 async function sendTransactionEmail(userEmail, name, amount, toAccount) {
   return await sendEmail(
@@ -329,7 +422,9 @@ module.exports = {
   sendEmail,
   sendRegistrationEmail,
   sendOtpEmail,
+  sendPasswordResetEmail,
   sendTransactionEmail,
   sendTransactionFailureEmail,
 };
+
 

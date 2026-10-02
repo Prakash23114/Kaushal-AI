@@ -3,6 +3,8 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import Login from './Features/auth/pages/Login';
 import Register from './Features/auth/pages/Register';
 import VerifyEmail from './Features/auth/pages/VerifyEmail';
+import ForgotPassword from './Features/auth/pages/ForgotPassword';
+import ResetPassword from './Features/auth/pages/ResetPassword';
 import Protected from './Features/auth/components/Protected';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -43,6 +45,20 @@ export const router = createBrowserRouter([
     path: '/verify-otp',
     element: <VerifyEmail />,
   },
+  {
+    path: '/forgot-password',
+    element: <ForgotPassword />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPassword />,
+  },
+  {
+    path: '/all-set',
+    element: <ResetPassword />,
+  },
+
+
 
   // Mandatory Resume Onboarding (Protected, but allows users without profile)
   {

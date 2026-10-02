@@ -65,7 +65,32 @@ export async function login({ email, password }) {
     }
 }
 
+export async function forgotPassword({ email }) {
+    try {
+        const response = await api.post("/forgot-password", { email });
+        return response.data;
+    } catch (error) {
+        const message = error.response?.data?.message || "Failed to send reset code. Please check your email.";
+        throw new Error(message);
+    }
+}
+
+export async function resetPassword({ email, otp, newPassword }) {
+    try {
+        const response = await api.post("/reset-password", {
+            email,
+            otp,
+            newPassword
+        });
+        return response.data;
+    } catch (error) {
+        const message = error.response?.data?.message || "Failed to reset password. Please check the code.";
+        throw new Error(message);
+    }
+}
+
 export async function logout() {
+
     try {
         const response = await api.post("/logout", {});
         return response.data;

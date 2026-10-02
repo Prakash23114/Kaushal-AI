@@ -2,7 +2,7 @@ const userModel = require("../models/user.model.js")
 const bcrypt = require('bcryptjs')
 const jwt = require("jsonwebtoken")
 const tokenBlacklistModel = require("../models/backList.model.js")
-const { sendRegistrationEmail, sendOtpEmail } = require("../services/email.service.js")
+const { sendRegistrationEmail, sendOtpEmail, sendPasswordResetEmail } = require("../services/email.service.js")
 
 
 /**
@@ -223,22 +223,30 @@ async function resendOtpController(req, res) {
  * @access Public
 */
 async function loginUserController(req, res) {
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
+    const identifier = (email || username || "").trim();
 
-    if (!email || !password) {
+    if (!identifier || !password) {
         return res.status(400).json({
-            message: "Please enter both email and password"
+            message: "Please enter both email/username and password"
         })
     }
 
-    const normalizedEmail = email.toLowerCase().trim()
-    const user = await userModel.findOne({ email: normalizedEmail })
+    const normalizedIdentifier = identifier.toLowerCase()
+    const user = await userModel.findOne({
+        $or: [
+            { email: normalizedIdentifier },
+            { username: identifier },
+            { username: normalizedIdentifier }
+        ]
+    })
 
     if (!user) {
         return res.status(400).json({
-            message: "Account does not exist with this email address"
+            message: "Account does not exist with this email address or username"
         })
     }
+
 
     const isPasswordValid = await bcrypt.compare(password, user.password)
 
@@ -651,6 +659,102 @@ async function googleTokenLoginController(req, res) {
     }
 }
 
+/**
+ * @name forgotPasswordController
+ * @description Send 6-digit OTP code for password reset
+ * @access Public
+ */
+async function forgotPasswordController(req, res) {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({
+            message: "Email address is required"
+        });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await userModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+        // Return 404 so UI can guide the user
+        return res.status(404).json({
+            message: "No account found with this email address"
+        });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
+
+    sendPasswordResetEmail(user.email, user.username, otp).catch((err) => {
+        console.error("[Auth] Password reset email dispatch failed:", err.message || err);
+    });
+
+    return res.status(200).json({
+        success: true,
+        message: "A 6-digit password reset code has been sent to your email.",
+        email: user.email
+    });
+}
+
+/**
+ * @name resetPasswordController
+ * @description Reset user's password using the 6-digit OTP code
+ * @access Public
+ */
+async function resetPasswordController(req, res) {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+        return res.status(400).json({
+            message: "Email, reset code, and new password are required"
+        });
+    }
+
+    if (newPassword.length < 8) {
+        return res.status(400).json({
+            message: "Password must be at least 8 characters long"
+        });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await userModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+        return res.status(404).json({
+            message: "No account found with this email address"
+        });
+    }
+
+    if (!user.otp || user.otp !== otp.toString().trim()) {
+        return res.status(400).json({
+            message: "Invalid verification code. Please check and try again."
+        });
+    }
+
+    if (user.otpExpiry && new Date(user.otpExpiry) < new Date()) {
+        return res.status(400).json({
+            message: "Reset code has expired. Please request a new reset code."
+        });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    user.password = hash;
+    user.otp = null;
+    user.otpExpiry = null;
+    user.isVerified = true;
+    await user.save();
+
+    return res.status(200).json({
+        success: true,
+        message: "Password has been reset successfully! You can now sign in with your new password."
+    });
+}
+
 module.exports = {
     registerUserController,
     verifyOtpController,
@@ -661,5 +765,7 @@ module.exports = {
     sendTestEmailController,
     initiateGoogleLogin,
     googleCallbackController,
-    googleTokenLoginController
-}
+    googleTokenLoginController,
+    forgotPasswordController,
+    resetPasswordController
+}

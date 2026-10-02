@@ -33,6 +33,21 @@ authRouter.post("/resend-otp", authController.resendOtpController)
  */
 authRouter.post("/login", authController.loginUserController)
 
+/**
+ * @route POST /api/auth/forgot-password
+ * @description Request a 6-digit password reset code
+ * @access Public
+ */
+authRouter.post("/forgot-password", authController.forgotPasswordController)
+
+/**
+ * @route POST /api/auth/reset-password
+ * @description Reset user's password using the 6-digit code
+ * @access Public
+ */
+authRouter.post("/reset-password", authController.resetPasswordController)
+
+
 
 /**
  * @route GET & POST /api/auth/logout

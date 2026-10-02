@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router';
-import { Sparkles, User, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import AuthLayout from '../components/AuthLayout';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import PasswordCriteria from '../components/PasswordCriteria';
 
 export const Register = () => {
   const { loading, handleRegister } = useAuth();
@@ -12,6 +14,7 @@ export const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,21 +29,22 @@ export const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    if (!username || !email || !password) {
-      setErrorMsg('Please fill in all fields.');
+
+    if (!username.trim() || !email.trim() || !password) {
+      setErrorMsg('Please fill in all required fields.');
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMsg('Password should be at least 6 characters long.');
+    if (password.length < 8) {
+      setErrorMsg('Password should be at least 8 characters long.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const res = await handleRegister({ username, email, password });
-      // Redirect to Verify Email page with the registered email
-      navigate('/verify-email', { state: { email } });
+      await handleRegister({ username: username.trim(), email: email.trim(), password });
+      // Redirect to Verify Email screen with the registered email
+      navigate('/verify-email', { state: { email: email.trim() } });
     } catch (err) {
       setErrorMsg(err.message || 'Registration failed. Username or email may already be in use.');
     } finally {
@@ -49,245 +53,118 @@ export const Register = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg-app)',
-        padding: '2rem 1.5rem',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
+    <AuthLayout
+      variant="register"
+      cardWidth="wide"
+      title="Create Your Account"
+      subtitle="Join Kaushal AI and start your journey towards a better future."
     >
-      <div
-        style={{
-          position: 'absolute',
-          width: '500px',
-          height: '500px',
-          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Error Alert */}
+      {errorMsg && (
+        <div className="auth-alert error">
+          <AlertCircle size={17} style={{ flexShrink: 0 }} />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
-      <div
-        className="glass-card"
-        style={{
-          maxWidth: '480px',
-          width: '100%',
-          padding: '2.5rem 2.25rem',
-          borderRadius: 'var(--radius-xl)',
-          position: 'relative',
-          zIndex: 1,
-          boxShadow: 'var(--shadow-lg)',
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div
-            onClick={() => navigate('/')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              cursor: 'pointer',
-              marginBottom: '1rem',
-            }}
-          >
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: 'var(--accent-gradient)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 14px var(--primary-glow)',
-              }}
+      {/* Main Registration Form */}
+      <form onSubmit={handleSubmit} className="auth-form">
+        {/* Full Name or Username */}
+        <div className="auth-field-group">
+          <label htmlFor="register-username">Full Name or Username</label>
+          <div className="auth-input-wrapper">
+            <User size={18} className="auth-input-icon" />
+            <input
+              id="register-username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Prakash Mandal or username"
+              required
+              className="auth-input"
+              autoComplete="username"
+            />
+          </div>
+        </div>
+
+
+        {/* Email Address */}
+        <div className="auth-field-group">
+          <label htmlFor="register-email">Email Address</label>
+          <div className="auth-input-wrapper">
+            <Mail size={18} className="auth-input-icon" />
+            <input
+              id="register-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="prakashmandal23114@gmail.com"
+              required
+              className="auth-input"
+              autoComplete="email"
+            />
+          </div>
+        </div>
+
+        {/* Password */}
+        <div className="auth-field-group">
+          <label htmlFor="register-password">Password</label>
+          <div className="auth-input-wrapper">
+            <Lock size={18} className="auth-input-icon" />
+            <input
+              id="register-password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="auth-input"
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              className="auth-eye-btn"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              title={showPassword ? 'Hide password' : 'Show password'}
             >
-              <Sparkles size={20} color="#fff" />
-            </div>
-            <span style={{ fontWeight: 800, fontSize: '1.35rem', letterSpacing: '-0.02em' }}>
-              Kaushal <span className="gradient-text">AI</span>
-            </span>
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
-          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, marginBottom: '0.35rem' }}>Create Account</h2>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-            Join Kaushal AI and elevate your interview readiness.
-          </p>
+          {/* Live Password Criteria Checklist */}
+          <PasswordCriteria password={password} />
         </div>
 
-        {errorMsg && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              padding: '0.75rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--danger-bg)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: 'var(--danger)',
-              fontSize: '0.85rem',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <AlertCircle size={18} style={{ flexShrink: 0 }} />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {/* Continue with Google */}
-        <div style={{ marginBottom: '1.25rem' }}>
-          <GoogleAuthButton text="Sign up with Google" />
-        </div>
-
-        {/* Subtle Divider */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.85rem',
-            marginBottom: '1.35rem',
-          }}
+        {/* Primary Submit Button */}
+        <button
+          type="submit"
+          disabled={submitting || loading}
+          className="auth-btn-primary"
         >
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-          <span
-            style={{
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            or sign up with email
-          </span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
-          <div>
-            <label
-              htmlFor="username"
-              style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}
-            >
-              Full Name or Username
-            </label>
-            <div style={{ position: 'relative' }}>
-              <User
-                size={18}
-                style={{
-                  position: 'absolute',
-                  left: '14px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
-              />
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Prakash Mandal"
-                required
-                className="input-field"
-                style={{ paddingLeft: '2.5rem' }}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="email"
-              style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}
-            >
-              Email Address
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Mail
-                size={18}
-                style={{
-                  position: 'absolute',
-                  left: '14px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
-              />
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                required
-                className="input-field"
-                style={{ paddingLeft: '2.5rem' }}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}
-            >
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Lock
-                size={18}
-                style={{
-                  position: 'absolute',
-                  left: '14px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
-              />
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                required
-                className="input-field"
-                style={{ paddingLeft: '2.5rem' }}
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting || loading}
-            className="btn btn-primary"
-            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', fontSize: '0.95rem' }}
-          >
-            {submitting ? (
+          {submitting ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
               <span>Creating Account...</span>
-            ) : (
-              <>
-                <span>Get Started Free</span>
-                <ArrowRight size={16} />
-              </>
-            )}
-          </button>
-        </form>
+            </>
+          ) : (
+            <>
+              <span>Create Account</span>
+              <ArrowRight size={17} />
+            </>
+          )}
+        </button>
+      </form>
 
-        <div style={{ marginTop: '1.75rem', textAlign: 'center', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-          Already have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-            Sign in
-          </Link>
-        </div>
+      {/* Continue with Google */}
+      <GoogleAuthButton text="Continue with Google" />
+
+      {/* Footer Text */}
+      <div className="auth-footer-prompt">
+        Already have an account?{' '}
+        <Link to="/login">Sign in</Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

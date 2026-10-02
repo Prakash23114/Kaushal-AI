@@ -1,6 +1,6 @@
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../context/auth.context.jsx";
-import { login, register, verifyOtp, resendOtp, logout, getMe } from "../services/auth.api.js";  
+import { login, register, verifyOtp, resendOtp, forgotPassword, resetPassword, logout, getMe } from "../services/auth.api.js";  
 
 export const useAuth = () => {
 
@@ -72,6 +72,29 @@ export const useAuth = () => {
         }
     }
 
+    const handleForgotPassword = async ({ email }) => {
+        try {
+            const data = await forgotPassword({ email })
+            return data
+        } catch (err) {
+            console.error("Forgot password error:", err)
+            throw err
+        }
+    }
+
+    const handleResetPassword = async ({ email, otp, newPassword }) => {
+        setLoading(true)
+        try {
+            const data = await resetPassword({ email, otp, newPassword })
+            return data
+        } catch (err) {
+            console.error("Reset password error:", err)
+            throw err
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleLogout = async () => {
         setLoading(true)
         try {
@@ -115,5 +138,15 @@ export const useAuth = () => {
         }
     }, [])
 
-    return { user, loading, handleRegister, handleVerifyOtp, handleResendOtp, handleLogin, handleLogout }
+    return { 
+        user, 
+        loading, 
+        handleRegister, 
+        handleVerifyOtp, 
+        handleResendOtp, 
+        handleForgotPassword,
+        handleResetPassword,
+        handleLogin, 
+        handleLogout 
+    }
 }

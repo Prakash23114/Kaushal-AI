@@ -1,4 +1,4 @@
-import  { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import {
   Menu,
@@ -6,23 +6,45 @@ import {
   Moon,
   Search,
   Bell,
-  Sparkles,
-  PlusCircle,
-  CheckCircle2,
+  ChevronDown,
+  User as UserIcon,
+  LogOut,
+  Compass,
 } from 'lucide-react';
 import { useTheme } from '../../context/theme.context';
 import { useAuth } from '../../Features/auth/hooks/useAuth';
 
 export const Navbar = ({ onOpenSidebar }) => {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, handleLogout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
 
-  // Map route to human title
+  const username = user?.username || 'Prakash2311D';
+  const email = user?.email || 'prakashmandal23114@gmail.com';
+  const isDark = theme === 'dark';
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const onLogoutClick = async () => {
+    setShowUserMenu(false);
+    await handleLogout();
+    navigate('/login');
+  };
+
   const getPageTitle = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'Dashboard Overview';
@@ -36,7 +58,7 @@ export const Navbar = ({ onOpenSidebar }) => {
     if (path.includes('/daily-challenge')) return 'Daily AI Interview Challenge';
     if (path.includes('/new-interview')) return 'Create AI Interview Strategy';
     if (path.includes('/interview/')) return 'Interview Strategy Report';
-    return 'Kaushal AI';
+    return 'Dashboard Overview';
   };
 
   const handleSearchSubmit = (e) => {
@@ -49,20 +71,22 @@ export const Navbar = ({ onOpenSidebar }) => {
   return (
     <header
       style={{
-        height: '70px',
+        height: '72px',
         position: 'sticky',
         top: 0,
         zIndex: 30,
-        background: 'var(--bg-glass)',
+        backgroundColor: 'var(--bg-glass)',
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 1.75rem',
+        padding: '0 2rem',
+        fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif",
+        transition: 'background-color 0.25s ease, border-color 0.25s ease',
       }}
     >
-      {/* Left: Mobile hamburger + Page Title */}
+      {/* Left: Mobile Toggle + Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <button
           onClick={onOpenSidebar}
@@ -70,10 +94,12 @@ export const Navbar = ({ onOpenSidebar }) => {
           aria-label="Toggle Navigation"
           style={{
             display: 'none',
-            padding: '0.5rem',
-            borderRadius: 'var(--radius-md)',
+            padding: '0.45rem',
+            borderRadius: '10px',
             color: 'var(--text-primary)',
-            background: 'var(--bg-surface-elevated)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            cursor: 'pointer',
           }}
         >
           <Menu size={20} />
@@ -82,243 +108,396 @@ export const Navbar = ({ onOpenSidebar }) => {
         <div>
           <h1
             style={{
-              fontSize: '1.25rem',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
+              fontSize: '1.45rem',
+              fontWeight: 800,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.4px',
               margin: 0,
+              lineHeight: 1.2,
             }}
           >
             {getPageTitle()}
           </h1>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+          <p
+            style={{
+              fontSize: '0.78rem',
+              color: 'var(--text-muted)',
+              margin: '2px 0 0 0',
+              fontWeight: 500,
+            }}
+          >
             Prepare Smarter • Interview Better • Get Hired
           </p>
         </div>
       </div>
 
-      {/* Right: Search, Quick New Button, Theme Toggle, Notifications, Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        {/* Global Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="navbar-search" style={{ position: 'relative' }}>
-          <Search
-            size={16}
+      {/* Right Controls: Pill Search, Day/Night, Bell, User Dropdown */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        {/* Search Pill */}
+        <form onSubmit={handleSearchSubmit} className="navbar-search">
+          <div
             style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--text-muted)',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              width: '290px',
             }}
-          />
-          <input
-            type="text"
-            placeholder="Search questions, skills, concepts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '260px',
-              padding: '0.5rem 1rem 0.5rem 2.25rem',
-              borderRadius: 'var(--radius-full)',
-              background: 'var(--bg-surface-elevated)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: '0.85rem',
-              outline: 'none',
-              transition: 'all var(--transition-fast)',
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = 'var(--primary)';
-              e.target.style.width = '300px';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = 'var(--border-subtle)';
-              e.target.style.width = '260px';
-            }}
-          />
+          >
+            <Search
+              size={16}
+              style={{
+                position: 'absolute',
+                left: '14px',
+                color: 'var(--text-muted)',
+                pointerEvents: 'none',
+              }}
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search questions, skills, concepts..."
+              style={{
+                width: '100%',
+                height: '38px',
+                borderRadius: '9999px',
+                border: '1.5px solid var(--border-subtle)',
+                backgroundColor: 'var(--bg-surface)',
+                padding: '0 1rem 0 2.35rem',
+                fontSize: '0.84rem',
+                color: 'var(--text-primary)',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'var(--primary)';
+                e.target.style.boxShadow = '0 0 0 3px var(--primary-glow)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'var(--border-subtle)';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
         </form>
 
-        {/* Quick New Strategy Button */}
+        {/* Day / Night Mode Pill Toggle */}
         <button
-          onClick={() => navigate('/app/new-interview')}
-          className="btn btn-primary btn-sm"
-          style={{ gap: '0.4rem', borderRadius: 'var(--radius-full)' }}
-        >
-          <PlusCircle size={15} />
-          <span>New Strategy</span>
-        </button>
-
-        {/* Theme Toggle (Dark / Light) */}
-        <button
+          type="button"
           onClick={toggleTheme}
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           style={{
-            width: '38px',
             height: '38px',
-            borderRadius: '50%',
-            background: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-subtle)',
+            padding: '0 0.55rem',
+            borderRadius: '9999px',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1.5px solid var(--border-subtle)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--text-primary)',
-            transition: 'all var(--transition-fast)',
+            gap: '0.35rem',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-hover)')}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
         >
-          {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
-        </button>
-
-        {/* Notifications Dropdown */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            title="Notifications"
+          {/* Sun icon */}
+          <div
             style={{
-              width: '38px',
-              height: '38px',
+              padding: '3px',
               borderRadius: '50%',
-              background: 'var(--bg-surface-elevated)',
-              border: '1px solid var(--border-subtle)',
+              backgroundColor: !isDark ? '#fef3c7' : 'transparent',
+              color: !isDark ? '#d97706' : '#64748b',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--text-primary)',
-              position: 'relative',
-              transition: 'all var(--transition-fast)',
+              transition: 'all 0.15s ease',
             }}
           >
-            <Bell size={18} />
-            <span
+            <Sun size={15} />
+          </div>
+
+          {/* Moon icon */}
+          <div
+            style={{
+              padding: '3px',
+              borderRadius: '50%',
+              backgroundColor: isDark ? '#312e81' : 'transparent',
+              color: isDark ? '#c4b5fd' : '#94a3b8',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Moon size={14} />
+          </div>
+        </button>
+
+        {/* Notification Bell */}
+        <button
+          type="button"
+          title="Notifications"
+          style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1.5px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-hover)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }}
+        >
+          <Bell size={17} />
+          {/* Red Notification Dot */}
+          <span
+            style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              backgroundColor: '#ef4444',
+            }}
+          />
+        </button>
+
+        {/* User Pill Button (Dark Orange Avatar 'P' and Prakash2311D) */}
+        <div style={{ position: 'relative' }} ref={userMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            style={{
+              height: '38px',
+              padding: '0 0.85rem 0 0.35rem',
+              borderRadius: '9999px',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1.5px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.55rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+          >
+            {/* Dark Orange Avatar Circle 'P' */}
+            <div
               style={{
-                position: 'absolute',
-                top: '7px',
-                right: '7px',
-                width: '8px',
-                height: '8px',
+                width: '28px',
+                height: '28px',
                 borderRadius: '50%',
-                background: 'var(--primary)',
-                boxShadow: '0 0 8px var(--primary)',
+                backgroundColor: '#c2410c', // Dark Orange!
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 6px rgba(194, 65, 12, 0.3)',
               }}
-            />
+            >
+              {username.charAt(0).toUpperCase()}
+            </div>
+            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {username}
+            </span>
+            <ChevronDown size={14} color="var(--text-muted)" />
           </button>
 
-          {showNotifications && (
+          {/* User Menu Dropdown */}
+          {showUserMenu && (
             <div
               style={{
                 position: 'absolute',
+                top: '46px',
                 right: 0,
-                top: '48px',
-                width: '320px',
-                background: 'var(--bg-surface)',
+                width: '230px',
+                backgroundColor: 'var(--bg-surface)',
+                borderRadius: '16px',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-lg)',
-                padding: '1rem',
+                boxShadow: isDark
+                  ? '0 12px 30px rgba(0, 0, 0, 0.5)'
+                  : '0 12px 30px rgba(180, 110, 50, 0.12)',
+                padding: '0.5rem',
                 zIndex: 60,
+                animation: 'fadeIn 0.15s ease',
               }}
             >
+              {/* Profile Header */}
               <div
                 style={{
+                  padding: '0.75rem 0.85rem',
+                  borderBottom: '1px solid var(--border-subtle)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingBottom: '0.75rem',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  marginBottom: '0.75rem',
+                  gap: '0.65rem',
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Notifications</span>
-                <span className="badge badge-primary">2 new</span>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: '#c2410c', // Dark Orange!
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(194, 65, 12, 0.3)',
+                    flexShrink: 0,
+                  }}
+                >
+                  {username.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      color: 'var(--text-primary)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {username}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.72rem',
+                      color: 'var(--text-muted)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {email}
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div
+              {/* Menu Links */}
+              <div style={{ padding: '0.35rem 0' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/app/dashboard');
+                  }}
                   style={{
+                    width: '100%',
+                    padding: '0.55rem 0.85rem',
+                    borderRadius: '10px',
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.65rem',
-                    padding: '0.5rem',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--bg-surface-elevated)',
+                    alignItems: 'center',
+                    gap: '0.55rem',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    color: 'var(--text-secondary)',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
                   }}
                 >
-                  <CheckCircle2 size={16} color="var(--success)" style={{ marginTop: '2px', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Daily Challenge Ready</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      Complete today's 3 questions to maintain your streak.
-                    </div>
-                  </div>
-                </div>
+                  <UserIcon size={16} color="var(--text-muted)" />
+                  <span>Dashboard</span>
+                </button>
 
-                <div
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/app/roadmap');
+                  }}
                   style={{
+                    width: '100%',
+                    padding: '0.55rem 0.85rem',
+                    borderRadius: '10px',
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.65rem',
-                    padding: '0.5rem',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--bg-surface-elevated)',
+                    alignItems: 'center',
+                    gap: '0.55rem',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    color: 'var(--text-secondary)',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
                   }}
                 >
-                  <Sparkles size={16} color="var(--primary)" style={{ marginTop: '2px', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Kaushal AI Coach Updated</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      Ready to simulate technical and project defense questions.
-                    </div>
-                  </div>
-                </div>
+                  <Compass size={16} color="var(--text-muted)" />
+                  <span>Preparation Roadmap</span>
+                </button>
+              </div>
+
+              {/* Logout Button */}
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.35rem' }}>
+                <button
+                  type="button"
+                  onClick={onLogoutClick}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.85rem',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.55rem',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    color: '#ef4444',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <LogOut size={16} color="#ef4444" />
+                  <span>Logout</span>
+                </button>
               </div>
             </div>
           )}
-        </div>
-
-        {/* User Avatar */}
-        <div
-          onClick={() => navigate('/app/dashboard')}
-          title={user?.email || 'Profile'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.35rem 0.65rem',
-            borderRadius: 'var(--radius-full)',
-            background: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-subtle)',
-            cursor: 'pointer',
-          }}
-        >
-          <div
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              background: 'var(--accent-gradient)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-            }}
-          >
-            {user?.username?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          <span
-            style={{
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              maxWidth: '110px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {user?.username || 'Candidate'}
-          </span>
         </div>
       </div>
     </header>
   );
 };
+
+export default Navbar;

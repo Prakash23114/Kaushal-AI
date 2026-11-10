@@ -5,7 +5,20 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").r
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/auth`,
     withCredentials: true
-})
+});
+
+// Attach Authorization Bearer token header from localStorage if available
+api.interceptors.request.use((config) => {
+    try {
+        const token = localStorage.getItem("kaushal_token");
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    } catch (e) {
+        // localStorage may be disabled in some environments
+    }
+    return config;
+});
 
 export async function register({ username, email, password }) {
     try {
@@ -16,7 +29,7 @@ export async function register({ username, email, password }) {
         });
         return response.data;
     } catch (error) {
-        const message = error.response?.data?.message || "Registration failed. Please try again.";
+        const message = error.response?.data?.message || (error.code === 'ERR_NETWORK' ? "Unable to connect to server. Please check your internet connection." : "Registration failed. Please try again.");
         const err = new Error(message);
         err.response = error.response;
         throw err;
@@ -29,6 +42,11 @@ export async function verifyOtp({ email, otp }) {
             email,
             otp
         });
+        if (response.data?.token) {
+            try {
+                localStorage.setItem("kaushal_token", response.data.token);
+            } catch (e) {}
+        }
         return response.data;
     } catch (error) {
         const message = error.response?.data?.message || "OTP verification failed. Please try again.";
@@ -54,9 +72,21 @@ export async function login({ email, password }) {
             email,
             password
         });
+        if (response.data?.token) {
+            try {
+                localStorage.setItem("kaushal_token", response.data.token);
+            } catch (e) {}
+        }
         return response.data;
     } catch (error) {
-        const message = error.response?.data?.message || "Login failed. Please check your credentials.";
+        let message = error.response?.data?.message;
+        if (!message) {
+            if (error.code === 'ERR_NETWORK' || !error.response) {
+                message = "Unable to connect to the backend server. The service may be waking up (Render free tier takes ~45s on cold start). Please wait a moment and try again.";
+            } else {
+                message = "Login failed. Please check your credentials.";
+            }
+        }
         const err = new Error(message);
         err.response = error.response;
         if (error.response?.data?.requiresVerification) {
@@ -92,12 +122,17 @@ export async function resetPassword({ email, otp, newPassword }) {
 }
 
 export async function logout() {
-
     try {
         const response = await api.post("/logout", {});
+        try {
+            localStorage.removeItem("kaushal_token");
+        } catch (e) {}
         return response.data;
     } catch (error) {
         console.error("Logout error:", error);
+        try {
+            localStorage.removeItem("kaushal_token");
+        } catch (e) {}
     }
 }
 
@@ -124,6 +159,11 @@ export function loginWithGoogle() {
 export async function googleTokenLogin(credential) {
     try {
         const response = await api.post("/google/token", { credential });
+        if (response.data?.token) {
+            try {
+                localStorage.setItem("kaushal_token", response.data.token);
+            } catch (e) {}
+        }
         return response.data;
     } catch (error) {
         const message = error.response?.data?.message || "Google authentication failed. Please try again.";

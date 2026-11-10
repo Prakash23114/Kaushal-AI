@@ -7,6 +7,19 @@ const api = axios.create({
     withCredentials: true,
 });
 
+// Attach Authorization Bearer token header from localStorage if available
+api.interceptors.request.use((config) => {
+    try {
+        const token = localStorage.getItem("kaushal_token");
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    } catch (e) {
+        // localStorage may be disabled in some environments
+    }
+    return config;
+});
+
 /**
  * =========================================================================
  * PROFILE & ONBOARDING APIS

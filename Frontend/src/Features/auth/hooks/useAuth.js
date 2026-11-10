@@ -110,6 +110,16 @@ export const useAuth = () => {
     useEffect(() => {
         let isMounted = true;
 
+        // Check for Google OAuth callback token in URL
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const authToken = urlParams.get("auth_token");
+            if (authToken) {
+                localStorage.setItem("kaushal_token", authToken);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        } catch (e) {}
+
         const getAndSetUser = async () => {
             try {
                 const data = await getMe()

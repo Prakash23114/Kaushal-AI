@@ -129,6 +129,7 @@ async function verifyOtpController(req, res) {
 
         return res.status(200).json({
             message: "Account already verified",
+            token,
             user: {
                 id: user._id.toString(),
                 username: user.username,
@@ -170,6 +171,7 @@ async function verifyOtpController(req, res) {
 
     return res.status(200).json({
         message: "Email verified successfully! Welcome to Kaushal AI.",
+        token,
         user: {
             id: user._id.toString(),
             username: user.username,
@@ -290,6 +292,7 @@ async function loginUserController(req, res) {
 
     res.status(200).json({
         message: "User logged in successfully",
+        token,
         user: {
             id: user._id.toString(),
             username: user.username,
@@ -543,8 +546,8 @@ async function googleCallbackController(req, res) {
 
         res.cookie("token", token, getCookieOptions(4));
 
-        // 5. Redirect successfully authenticated user to dashboard
-        return res.redirect(`${frontendUrl}/app/dashboard`);
+        // 5. Redirect successfully authenticated user to dashboard (with token fallback for cross-domain)
+        return res.redirect(`${frontendUrl}/app/dashboard?auth_token=${encodeURIComponent(token)}`);
     } catch (err) {
         console.error("[Google Auth] Callback exception:", err);
         return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent("An error occurred during Google sign in")}`);
@@ -633,6 +636,7 @@ async function googleTokenLoginController(req, res) {
 
         return res.status(200).json({
             message: "Google authentication successful",
+            token,
             user: {
                 id: user._id.toString(),
                 username: user.username,

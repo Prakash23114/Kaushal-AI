@@ -7,10 +7,14 @@ const profileRouter = require("./routes/candidateProfile.routes");
 
 const app = express();
 
+// Trust reverse proxy (essential for Render / Heroku / HTTPS cookie handling)
+app.set("trust proxy", 1);
+
 // Allowed CORS origins
 const allowedOrigins = [
     process.env.CLIENT_URL,
     process.env.FRONTEND_URL,
+    "https://kaushal-ai-phi.vercel.app",
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173"
@@ -21,14 +25,20 @@ app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
         const cleanOrigin = origin.replace(/\/$/, "");
-        if (allowedOrigins.includes(cleanOrigin) || process.env.NODE_ENV !== "production") {
+        if (
+            allowedOrigins.includes(cleanOrigin) ||
+            cleanOrigin.endsWith(".vercel.app") ||
+            process.env.NODE_ENV !== "production"
+        ) {
             return callback(null, true);
         }
         return callback(null, true);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept"],
+    exposedHeaders: ["Set-Cookie"],
+    optionsSuccessStatus: 204
 }));
 
 app.use(express.json({ limit: "10mb" }));

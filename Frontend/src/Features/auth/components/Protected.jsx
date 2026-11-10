@@ -7,45 +7,39 @@ import { getProfileMe } from '../../interview/services/interview.api';
 export const Protected = ({ children, skipOnboardingCheck = false }) => {
   const { loading, user } = useAuth();
   const location = useLocation();
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [hasProfile, setHasProfile] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    const checkUserProfile = async () => {
-      if (!user) {
-        if (isMounted) setProfileLoading(false);
-        return;
-      }
+    if (!user) {
+      return;
+    }
 
-      try {
-        const data = await getProfileMe();
+    setProfileLoading(true);
+    getProfileMe()
+      .then((data) => {
         if (isMounted) {
-          setHasProfile(!!data?.hasProfile);
+          setHasProfile(Boolean(data?.hasProfile));
         }
-      } catch (err) {
+      })
+      .catch((err) => {
         console.error('Error checking profile:', err);
         if (isMounted) {
           setHasProfile(false);
         }
-      } finally {
+      })
+      .finally(() => {
         if (isMounted) {
           setProfileLoading(false);
         }
-      }
-    };
-
-    if (user) {
-      checkUserProfile();
-    } else if (!loading) {
-      setProfileLoading(false);
-    }
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [user, loading, location.pathname]);
+  }, [user, location.pathname]);
 
   if (loading || (user && profileLoading)) {
     return (

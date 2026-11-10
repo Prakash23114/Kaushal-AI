@@ -1,6 +1,6 @@
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
-const { callGeminiWithRetry } = require("./gemini.client");
+const { callGeminiWithRetry, safeJsonParse } = require("./gemini.client");
 
 /**
  * Zod validation schema for mock interview answer evaluations
@@ -94,10 +94,10 @@ Return ONLY valid JSON matching the schema.`;
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                responseSchema: zodToJsonSchema(mockEvaluationSchema)
+                responseSchema: zodToJsonSchema(mockEvaluationSchema, { target: "openApi3" })
             }
         });
-        return JSON.parse(response.text);
+        return safeJsonParse(response.text);
     } catch (error) {
         console.warn("[Mock Evaluation] Gemini unavailable, generating heuristic evaluation fallback:", error.message);
         return generateHeuristicMockEvaluation(question, answer, role, difficulty, interviewType);
@@ -154,10 +154,10 @@ Return ONLY valid JSON matching the schema.`;
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                responseSchema: zodToJsonSchema(mockQuestionsSchema)
+                responseSchema: zodToJsonSchema(mockQuestionsSchema, { target: "openApi3" })
             }
         });
-        const parsed = JSON.parse(response.text);
+        const parsed = safeJsonParse(response.text);
         if (parsed?.questions?.length > 0) return parsed.questions;
     } catch (error) {
         console.warn("[Mock Questions] Gemini unavailable, using candidate-grounded fallback questions:", error.message);
@@ -243,10 +243,10 @@ Return ONLY valid JSON.`;
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                responseSchema: zodToJsonSchema(projectDefenseSchema)
+                responseSchema: zodToJsonSchema(projectDefenseSchema, { target: "openApi3" })
             }
         });
-        const parsed = JSON.parse(response.text);
+        const parsed = safeJsonParse(response.text);
         if (parsed?.questions?.length > 0) return parsed.questions;
     } catch (error) {
         console.warn("[Project Defense] Gemini unavailable, using project-grounded fallback:", error.message);

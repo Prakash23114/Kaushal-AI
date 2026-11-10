@@ -1,7 +1,7 @@
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
 const puppeteer = require("puppeteer");
-const { callGeminiWithRetry } = require("./gemini.client");
+const { callGeminiWithRetry, safeJsonParse } = require("./gemini.client");
 
 /**
  * Zod validation schema for interview strategy reports
@@ -218,11 +218,11 @@ IMPORTANT INSTRUCTIONS
         contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
+            responseSchema: zodToJsonSchema(interviewReportSchema, { target: "openApi3" }),
         }
     });
 
-    return JSON.parse(response.text);
+    return safeJsonParse(response.text);
 }
 
 /**
@@ -232,7 +232,18 @@ IMPORTANT INSTRUCTIONS
  * @returns {Promise<Buffer>}
  */
 async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        headless: "new",
+        args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--no-zygote",
+            "--single-process"
+        ],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+    });
     const page = await browser.newPage();
 
     await page.setContent(htmlContent, {
@@ -372,11 +383,11 @@ The HTML should contain:
         contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(resumePdfSchema),
+            responseSchema: zodToJsonSchema(resumePdfSchema, { target: "openApi3" }),
         }
     });
 
-    const jsonContent = JSON.parse(response.text);
+    const jsonContent = safeJsonParse(response.text);
     const pdfBuffer = await generatePdfFromHtml(jsonContent.html);
 
     return pdfBuffer;

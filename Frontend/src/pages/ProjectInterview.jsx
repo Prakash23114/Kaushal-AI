@@ -38,6 +38,27 @@ export const ProjectInterview = () => {
   const [evaluations, setEvaluations] = useState([]);
   const [defenseFinished, setDefenseFinished] = useState(false);
 
+  const fetchDefenseQuestions = async (name, stack, summary) => {
+    setLoadingQuestions(true);
+    try {
+      const res = await getProjectDefenseQuestions({
+        projectName: name,
+        techStack: stack,
+        projectSummary: summary
+      });
+      if (res?.questions?.length > 0) {
+        setQuestions(res.questions);
+        setActiveQuestionIndex(0);
+        setEvaluations([]);
+        setDefenseFinished(false);
+      }
+    } catch (e) {
+      console.error('Failed to load defense questions:', e);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
   useEffect(() => {
     const loadProfileProjects = async () => {
       try {
@@ -69,27 +90,6 @@ export const ProjectInterview = () => {
 
     loadProfileProjects();
   }, []);
-
-  const fetchDefenseQuestions = async (name, stack, summary) => {
-    setLoadingQuestions(true);
-    try {
-      const res = await getProjectDefenseQuestions({
-        projectName: name,
-        techStack: stack,
-        projectSummary: summary
-      });
-      if (res?.questions?.length > 0) {
-        setQuestions(res.questions);
-        setActiveQuestionIndex(0);
-        setEvaluations([]);
-        setDefenseFinished(false);
-      }
-    } catch (e) {
-      console.error('Failed to load defense questions:', e);
-    } finally {
-      setLoadingQuestions(false);
-    }
-  };
 
   const handleSelectDetectedProject = (index) => {
     setSelectedProjectIndex(index);

@@ -2,6 +2,14 @@ const jwt = require("jsonwebtoken")
 const tokenBlacklistModel = require("../models/backList.model.js")
 const userModel = require("../models/user.model.js")
 
+const isProduction = process.env.NODE_ENV === "production";
+const clearCookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/"
+};
+
 /**
  * @name authMiddleware
  * @description authenticate the user, verifies the JWT token and attaches the verified user to the request object
@@ -22,7 +30,7 @@ async function authUser(req, res, next) {
         const isTokenBlacklisted = await tokenBlacklistModel.findOne({ token })
 
         if (isTokenBlacklisted) {
-            res.clearCookie("token", { path: "/" })
+            res.clearCookie("token", clearCookieOptions)
             return res.status(401).json({
                 message: "Session expired or logged out. Please login again."
             })
@@ -32,7 +40,7 @@ async function authUser(req, res, next) {
         try {
             decode = jwt.verify(token, process.env.JWT_SECRET)
         } catch (jwtErr) {
-            res.clearCookie("token", { path: "/" })
+            res.clearCookie("token", clearCookieOptions)
             return res.status(401).json({
                 message: "Token is invalid or expired. Please login again."
             })
@@ -40,7 +48,7 @@ async function authUser(req, res, next) {
 
         const userId = decode?.id || decode?._id
         if (!userId) {
-            res.clearCookie("token", { path: "/" })
+            res.clearCookie("token", clearCookieOptions)
             return res.status(401).json({
                 message: "Malformed token. Please login again."
             })
@@ -52,7 +60,7 @@ async function authUser(req, res, next) {
         if (!user) {
             // Token was cryptographically valid, but user document no longer exists in DB.
             // Clear the stale cookie so the browser stops looping with invalid credentials.
-            res.clearCookie("token", { path: "/" })
+            res.clearCookie("token", clearCookieOptions)
             return res.status(401).json({
                 message: "User session invalid or user no longer exists. Please login again."
             })

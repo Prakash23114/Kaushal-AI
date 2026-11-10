@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/$/, "");
+
 const api = axios.create({
-    baseURL: "http://localhost:4000/api/auth",
+    baseURL: `${API_BASE_URL}/api/auth`,
     withCredentials: true
 })
 
@@ -113,7 +115,7 @@ export async function getMe() {
  * Redirects the browser to Google OAuth authorization endpoint
  */
 export function loginWithGoogle() {
-    window.location.href = "http://localhost:4000/api/auth/google";
+    window.location.href = `${API_BASE_URL}/api/auth/google`;
 }
 
 /**

@@ -6,7 +6,9 @@
 const {
     ai,
     GEMINI_MODELS,
-    callGeminiWithRetry
+    callGeminiWithRetry,
+    safeJsonParse,
+    sanitizeSchemaForGemini
 } = require("./gemini.client");
 
 const {
@@ -57,6 +59,8 @@ module.exports = {
     ai,
     GEMINI_MODELS,
     callGeminiWithRetry,
+    safeJsonParse,
+    sanitizeSchemaForGemini,
 
     // Strategy & Resume PDF
     interviewReportSchema,

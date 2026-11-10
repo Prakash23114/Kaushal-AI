@@ -4,6 +4,21 @@ const jwt = require("jsonwebtoken")
 const tokenBlacklistModel = require("../models/backList.model.js")
 const { sendRegistrationEmail, sendOtpEmail, sendPasswordResetEmail } = require("../services/email.service.js")
 
+const isProduction = process.env.NODE_ENV === "production";
+const getCookieOptions = (maxAgeDays = 4) => ({
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: maxAgeDays * 24 * 60 * 60 * 1000
+});
+const getClearCookieOptions = () => ({
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/"
+});
+
 
 /**
  * @name registerUserController
@@ -110,12 +125,7 @@ async function verifyOtpController(req, res) {
             { expiresIn: "4d" }
         )
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/"
-        })
+        res.cookie("token", token, getCookieOptions(4))
 
         return res.status(200).json({
             message: "Account already verified",
@@ -156,12 +166,7 @@ async function verifyOtpController(req, res) {
         { expiresIn: "4d" }
     )
 
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/"
-    })
+    res.cookie("token", token, getCookieOptions(4))
 
     return res.status(200).json({
         message: "Email verified successfully! Welcome to Kaushal AI.",
@@ -281,12 +286,7 @@ async function loginUserController(req, res) {
         { expiresIn: "1d" }
     )
 
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/"
-    })
+    res.cookie("token", token, getCookieOptions(4))
 
     res.status(200).json({
         message: "User logged in successfully",
@@ -314,7 +314,7 @@ async function logoutUserController(req, res) {
             console.warn("Token blacklist warning:", e.message)
         }
     }
-    res.clearCookie("token", { path: "/" })
+    res.clearCookie("token", getClearCookieOptions())
 
     return res.status(200).json({
         message: "User logged out successfully"
@@ -337,7 +337,7 @@ async function getMeController(req, res) {
         }
 
         if (!user) {
-            res.clearCookie("token", { path: "/" })
+            res.clearCookie("token", getClearCookieOptions())
             return res.status(401).json({
                 message: "User session expired or user not found. Please login again."
             })
@@ -541,12 +541,7 @@ async function googleCallbackController(req, res) {
             { expiresIn: "4d" }
         );
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/"
-        });
+        res.cookie("token", token, getCookieOptions(4));
 
         // 5. Redirect successfully authenticated user to dashboard
         return res.redirect(`${frontendUrl}/app/dashboard`);
@@ -634,12 +629,7 @@ async function googleTokenLoginController(req, res) {
             { expiresIn: "4d" }
         );
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/"
-        });
+        res.cookie("token", token, getCookieOptions(4));
 
         return res.status(200).json({
             message: "Google authentication successful",

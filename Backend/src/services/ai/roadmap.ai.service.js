@@ -1,6 +1,6 @@
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
-const { callGeminiWithRetry } = require("./gemini.client");
+const { callGeminiWithRetry, safeJsonParse } = require("./gemini.client");
 
 /**
  * Zod validation schema for personalized 14-day roadmaps
@@ -40,10 +40,10 @@ Return ONLY valid JSON.`;
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                responseSchema: zodToJsonSchema(personalizedRoadmapSchema)
+                responseSchema: zodToJsonSchema(personalizedRoadmapSchema, { target: "openApi3" })
             }
         });
-        return JSON.parse(response.text);
+        return safeJsonParse(response.text);
     } catch (error) {
         console.warn("[Personalized Roadmap] Gemini unavailable, generating dynamic plan fallback:", error.message);
         const weakList = candidateProfile.weakAreas?.map(w => w.name) || ["System Design", "Docker", "Database Indexing"];

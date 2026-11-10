@@ -1,19 +1,29 @@
 require("dotenv").config();
 const nodemailer = require("nodemailer");
 
-// Part 1: Set Up Nodemailer with OAuth2
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    type: "OAuth2",
-    user: process.env.EMAIL_USER,
-    clientId: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    refreshToken: process.env.REFRESH_TOKEN,
-  },
-});
+// Part 1: Set Up Nodemailer with App Password or OAuth2
+const transporterConfig = process.env.EMAIL_PASS
+  ? {
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    }
+  : {
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        type: "OAuth2",
+        user: process.env.EMAIL_USER,
+        clientId: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET,
+        refreshToken: process.env.REFRESH_TOKEN,
+      },
+    };
+
+const transporter = nodemailer.createTransport(transporterConfig);
 
 // Verify connection on startup
 transporter.verify((error, success) => {

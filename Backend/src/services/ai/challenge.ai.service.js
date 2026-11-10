@@ -1,6 +1,6 @@
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
-const { callGeminiWithRetry } = require("./gemini.client");
+const { callGeminiWithRetry, safeJsonParse } = require("./gemini.client");
 
 /**
  * Zod validation schema for daily challenge
@@ -124,11 +124,11 @@ Return ONLY valid JSON matching the schema.`;
                 contents: prompt,
                 config: {
                     responseMimeType: "application/json",
-                    responseSchema: zodToJsonSchema(dailyChallengeSchema)
+                    responseSchema: zodToJsonSchema(dailyChallengeSchema, { target: "openApi3" })
                 }
             });
 
-            const parsed = JSON.parse(response.text);
+            const parsed = safeJsonParse(response.text);
             dailyChallengeCache.set(cacheKey, parsed);
             return parsed;
         } catch (error) {

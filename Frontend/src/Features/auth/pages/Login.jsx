@@ -13,7 +13,11 @@ export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('error');
+    return err ? decodeURIComponent(err) : '';
+  });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {

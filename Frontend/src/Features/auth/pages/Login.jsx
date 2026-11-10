@@ -39,8 +39,12 @@ export const Login = () => {
 
     setSubmitting(true);
     try {
-      await handleLogin({ email, password });
-      navigate('/app/dashboard');
+      const res = await handleLogin({ email, password });
+      if (res?.hasProfile === false) {
+        navigate('/app/onboarding');
+      } else {
+        navigate('/app/dashboard');
+      }
     } catch (err) {
       if (err.requiresVerification || err.response?.data?.requiresVerification) {
         const verifyEmail = err.email || err.response?.data?.email || email;

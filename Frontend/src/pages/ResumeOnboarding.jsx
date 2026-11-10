@@ -28,7 +28,7 @@ const ANALYSIS_STEPS = [
 ];
 
 export const ResumeOnboarding = () => {
-  const { user } = useAuth();
+  const { user, setHasProfile } = useAuth();
   const navigate = useNavigate();
 
   const [resumeFile, setResumeFile] = useState(null);
@@ -97,6 +97,9 @@ export const ResumeOnboarding = () => {
 
       if (response && response.profile) {
         setProfileResult(response.profile);
+        if (typeof setHasProfile === 'function') {
+          setHasProfile(true);
+        }
         confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
       } else {
         throw new Error('Failed to analyze candidate profile.');
